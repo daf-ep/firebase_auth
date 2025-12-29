@@ -1,0 +1,43 @@
+name: fiber_firebase_auth
+description: "This package provides a streamlined Firebase Auth helper with first-online logic. It simplifies sign-up, sign-in, password reset, and user-data handling, while managing local state and sync, ensuring secure and reliable authentication across devices."
+version: 1.0.0
+
+environment:
+  sdk: ^3.9.2
+
+repository: https://github.com/daf-ep/firebase_auth
+
+dependencies:
+  flutter:
+    sdk: flutter
+  injectable: ^2.5.1
+  get_it: ^8.2.0
+  rxdart: ^0.28.0
+  equatable: ^2.0.7
+  string_validator: ^1.2.0
+  android_id: ^0.5.1
+  device_info_plus: ^12.3.0
+  http: ^1.6.0
+  internet_connection_checker_plus: ^2.9.1+1
+  firebase_core: ^4.1.1
+  firebase_auth: ^6.1.1
+  firebase_database: ^12.1.1
+  drift: ^2.30.0
+  flutter_secure_storage: ^9.2.4
+  sqlcipher_flutter_libs: ^0.6.8
+  sqlite3: ^2.9.4
+  package_info_plus: ^9.0.0
+  path_provider: ^2.1.5
+  path: ^1.9.1
+  crypto: ^3.0.7
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  build_runner: ^2.4.13
+  injectable_generator: ^2.6.2
+  drift_dev: ^2.30.0
+
+flutter:
+  uses-material-design: true

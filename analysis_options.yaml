@@ -1,0 +1,10 @@
+include: package:flutter_lints/flutter.yaml
+
+analyser:
+  exclude:
+    - "**/di.*.dart"
+
+linter:
+  rules:
+    - prefer_relative_imports
+    - unnecessary_breaks

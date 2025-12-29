@@ -1,0 +1,107 @@
+// Copyright (C) 2025 Fiber
+//
+// All rights reserved. This script, including its code and logic, is the
+// exclusive property of Fiber SAS. Redistribution, reproduction,
+// or modification of any part of this script is strictly prohibited
+// without prior written permission from Fiber SAS.
+//
+// Conditions of use:
+// - The code may not be copied, duplicated, or used, in whole or in part,
+//   for any purpose without explicit authorization.
+// - Redistribution of this code, with or without modification, is not
+//   permitted unless expressly agreed upon by Fiber SAS.
+// - The name "Fiber" and any associated branding, logos, or
+//   trademarks may not be used to endorse or promote derived products
+//   or services without prior written approval.
+//
+// Disclaimer:
+// THIS SCRIPT AND ITS CODE ARE PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND,
+// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE, OR NON-INFRINGEMENT. IN NO EVENT SHALL
+// FIBER SAS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+// EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING BUT NOT LIMITED TO LOSS OF USE,
+// DATA, PROFITS, OR BUSINESS INTERRUPTION) ARISING OUT OF OR RELATED TO THE USE
+// OR INABILITY TO USE THIS SCRIPT, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+//
+// Unauthorized copying or reproduction of this script, in whole or in part,
+// is a violation of applicable intellectual property laws and will result
+// in legal action.
+
+import 'package:equatable/equatable.dart';
+
+import 'device.dart';
+import 'metadata.dart';
+
+class UserConstants {
+  static const String version = "version";
+  static const String email = "email";
+  static const String devices = "devices";
+  static const String metadata = "metadata";
+  static const String data = "data";
+}
+
+class User extends Equatable {
+  final String userId;
+  final int version;
+  final String email;
+  final List<UserDevice> devices;
+  final UserMetadata metadata;
+  final UserData data;
+
+  const User({
+    required this.userId,
+    required this.version,
+    required this.email,
+    required this.devices,
+    required this.metadata,
+    required this.data,
+  });
+
+  factory User.fromMap(String userId, Map<String, dynamic> map) {
+    return User(
+      userId: userId,
+      version: map[UserConstants.version],
+      email: map[UserConstants.email],
+      metadata: UserMetadata.fromMap(map[UserConstants.metadata]),
+      devices: (map[UserConstants.devices] as List<dynamic>).map((device) => UserDevice.fromMap(device)).toList(),
+      data: map[UserConstants.data],
+    );
+  }
+
+  User copyWith({
+    String? userId,
+    int? version,
+    String? email,
+    List<UserDevice>? devices,
+    UserMetadata? metadata,
+    UserData? data,
+  }) {
+    return User(
+      userId: userId ?? this.userId,
+      version: version ?? this.version,
+      email: email ?? this.email,
+      devices: devices ?? this.devices,
+      metadata: metadata ?? this.metadata,
+      data: data ?? this.data,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      UserConstants.version: version,
+      UserConstants.email: email,
+      UserConstants.devices: devices.map((device) => device.toMap()).toList(),
+      UserConstants.metadata: metadata.toMap(),
+      UserConstants.data: data.toMap(),
+    };
+  }
+
+  @override
+  List<Object?> get props => [userId, version, devices, metadata, data];
+}
+
+abstract class UserData {
+  UserData fromMap();
+
+  Map<String, dynamic> toMap();
+}
