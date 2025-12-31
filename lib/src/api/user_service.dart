@@ -31,8 +31,8 @@ import 'package:injectable/injectable.dart';
 import 'package:rxdart/subjects.dart';
 
 import '../../models/user/user.dart';
-import '../firebase/auth/auth_service.dart';
-import '../local_storage/services/user_service.dart';
+import '../internal/local/user_service.dart';
+import '../internal/remote/auth/auth_service.dart';
 
 abstract class UserService {
   /// Latest resolved user data for the current session.
@@ -90,12 +90,14 @@ abstract class UserService {
   /// This stream is commonly used to trigger user-scoped data loading,
   /// cleanup, or navigation logic.
   Stream<String?> get userIdStream;
+
+  Future<void> signOut();
 }
 
 @Singleton(as: UserService)
 class UserServiceImpl implements UserService {
   final LocalUserService _localUser;
-  final AuthService _auth;
+  final RemoteAuthService _auth;
 
   UserServiceImpl(this._localUser, this._auth);
 
@@ -120,6 +122,9 @@ class UserServiceImpl implements UserService {
 
   @override
   Stream<String?> get userIdStream => _userIdSubject.stream;
+
+  @override
+  Future<void> signOut() => _auth.signOut();
 
   @PostConstruct()
   init() async {

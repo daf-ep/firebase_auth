@@ -38,7 +38,7 @@ import 'src/api/sign_in_service.dart';
 import 'src/api/sign_up_service.dart';
 import 'src/api/user_service.dart';
 import 'src/api/validator_service.dart';
-import 'src/local_storage/local_storage.dart';
+import 'src/internal/local/local_storage.dart';
 
 export './models/auth/credentials.dart';
 export './models/auth/password_policy.dart';
@@ -51,12 +51,12 @@ export './results/password_validator.dart';
 export './results/sign_in.dart';
 export './results/sign_up.dart';
 
-class FiberFirebaseAuth {
-  static Future<void> initialize(String databaseUrl) async {
-    await configureAuthDependencies();
+class FiberAuth {
+  static Future<void> initialize() async {
     if (Firebase.apps.isEmpty) {
       await Firebase.initializeApp();
     }
+    await configureAuthDependencies();
     await LocalAuthStorage.initialize();
   }
 

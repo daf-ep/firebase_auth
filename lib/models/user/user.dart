@@ -31,12 +31,14 @@ import 'package:equatable/equatable.dart';
 
 import 'device.dart';
 import 'metadata.dart';
+import 'preferred_language.dart';
 
 class UserConstants {
   static const String version = "version";
   static const String email = "email";
   static const String devices = "devices";
   static const String metadata = "metadata";
+  static const String preferredLanguage = "preferred_language";
   static const String data = "data";
 }
 
@@ -46,7 +48,8 @@ class User extends Equatable {
   final String email;
   final List<UserDevice> devices;
   final UserMetadata metadata;
-  final UserData data;
+  final PreferredLanguage preferredLanguage;
+  final Map<String, dynamic> data;
 
   const User({
     required this.userId,
@@ -54,6 +57,7 @@ class User extends Equatable {
     required this.email,
     required this.devices,
     required this.metadata,
+    required this.preferredLanguage,
     required this.data,
   });
 
@@ -63,7 +67,10 @@ class User extends Equatable {
       version: map[UserConstants.version],
       email: map[UserConstants.email],
       metadata: UserMetadata.fromMap(map[UserConstants.metadata]),
-      devices: (map[UserConstants.devices] as List<dynamic>).map((device) => UserDevice.fromMap(device)).toList(),
+      devices: ((map[UserConstants.devices] ?? {}) as Map<dynamic, dynamic>).entries
+          .map((e) => UserDevice.fromMap(e.key, e.value))
+          .toList(),
+      preferredLanguage: PreferredLanguage.fromMap(map[UserConstants.preferredLanguage]),
       data: map[UserConstants.data],
     );
   }
@@ -74,7 +81,8 @@ class User extends Equatable {
     String? email,
     List<UserDevice>? devices,
     UserMetadata? metadata,
-    UserData? data,
+    PreferredLanguage? preferredLanguage,
+    Map<String, dynamic>? data,
   }) {
     return User(
       userId: userId ?? this.userId,
@@ -82,6 +90,7 @@ class User extends Equatable {
       email: email ?? this.email,
       devices: devices ?? this.devices,
       metadata: metadata ?? this.metadata,
+      preferredLanguage: preferredLanguage ?? this.preferredLanguage,
       data: data ?? this.data,
     );
   }
@@ -90,18 +99,13 @@ class User extends Equatable {
     return {
       UserConstants.version: version,
       UserConstants.email: email,
-      UserConstants.devices: devices.map((device) => device.toMap()).toList(),
+      UserConstants.devices: Map.fromEntries(devices.map((device) => MapEntry(device.deviceId, device.toMap()))),
       UserConstants.metadata: metadata.toMap(),
-      UserConstants.data: data.toMap(),
+      UserConstants.preferredLanguage: preferredLanguage.toMap(),
+      UserConstants.data: data,
     };
   }
 
   @override
-  List<Object?> get props => [userId, version, devices, metadata, data];
-}
-
-abstract class UserData {
-  UserData fromMap();
-
-  Map<String, dynamic> toMap();
+  List<Object?> get props => [userId, version, devices, metadata, preferredLanguage, data];
 }

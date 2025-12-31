@@ -107,5 +107,3 @@ enum SignInWithEmailAndPasswordResult {
 
   bool get isSuccess => !isError;
 }
-
-enum TestCredientialResult { invalidEmail, userDisabled, tooManyRequests, networkRequestFailed, invalid, valid }

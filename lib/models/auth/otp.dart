@@ -29,24 +29,12 @@
 
 import 'package:equatable/equatable.dart';
 
-class OtpConstants {
-  static const String email = "email";
-  static const String deviceId = "device_id";
-  static const String createdAt = "created_at";
-  static const String otp = "otp";
-}
-
 class Otp extends Equatable {
-  final String email;
-  final String deviceId;
-  final int createdAt;
+  final String hash;
+  final String salt;
 
-  const Otp({required this.email, required this.deviceId, required this.createdAt});
-
-  Map<String, dynamic> toMap() {
-    return {OtpConstants.email: email, OtpConstants.deviceId: deviceId, OtpConstants.createdAt: createdAt};
-  }
+  const Otp({required this.hash, required this.salt});
 
   @override
-  List<Object?> get props => [email, deviceId, createdAt];
+  List<Object?> get props => [hash, salt];
 }

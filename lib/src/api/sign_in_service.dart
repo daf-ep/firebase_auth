@@ -35,20 +35,18 @@ import 'package:flutter/material.dart';
 import 'package:injectable/injectable.dart';
 import 'package:string_validator/string_validator.dart';
 
-import '../../helpers/local.dart';
-import '../../models/auth/otp.dart';
-import '../../models/auth/rate_limite.dart';
+import '../../extensions/local.dart';
 import '../../models/user/device.dart';
 import '../../results/auth.dart';
 import '../../results/sign_in.dart';
-import '../device/device_info_service.dart';
-import '../device/network_service.dart';
-import '../firebase/auth/auth_service.dart';
-import '../firebase/database/device_service.dart';
-import '../firebase/database/otp_service.dart';
-import '../firebase/database/rate_limite.dart';
-import '../firebase/database/user_id_service.dart';
-import '../local_storage/services/device_service.dart';
+import '../internal/device/device_info_service.dart';
+import '../internal/device/network_service.dart';
+import '../internal/local/device_service.dart';
+import '../internal/local/user_service.dart';
+import '../internal/remote/auth/auth_service.dart';
+import '../internal/remote/cloud_functions/otp_service.dart';
+import '../internal/remote/database/device_service.dart';
+import '../internal/remote/database/user_id_service.dart';
 
 abstract class SignInService {
   /// Authenticates a user using an email address and password.
@@ -103,12 +101,12 @@ abstract class SignInService {
 class SignInServiceImpl implements SignInService {
   final DeviceInfoService _deviceInfo;
   final NetworkService _network;
-  final AuthService _auth;
-  final DeviceService _device;
+  final RemoteAuthService _auth;
+  final RemoteDeviceService _device;
   final LocalDeviceService _localDevice;
-  final OtpService _otp;
-  final RateLimiteService _rateLimite;
-  final UserIdService _userId;
+  final RemoteOtpService _otp;
+  final RemoteUserIdService _userId;
+  final LocalUserService _localUser;
 
   SignInServiceImpl(
     this._deviceInfo,
@@ -117,8 +115,8 @@ class SignInServiceImpl implements SignInService {
     this._device,
     this._localDevice,
     this._otp,
-    this._rateLimite,
     this._userId,
+    this._localUser,
   );
 
   String? _newDeviceDetectedEmail;
@@ -135,27 +133,25 @@ class SignInServiceImpl implements SignInService {
     if (!_network.isReachable) return SignInResult.noInternet;
 
     final deviceId = _deviceInfo.identifier;
-    final userId = await _userId.getByDeviceId(deviceId);
+    final userId = await _userId.getByEmail(email);
     if (userId == null) {
-      final otp = Otp(email: email, createdAt: DateTime.now().millisecondsSinceEpoch, deviceId: deviceId);
+      await _localUser.deleteByEmail(email);
+      return SignInResult.invalidCredentials;
+    }
 
+    final isDeviceExists = await _device.isExists(userId, deviceId);
+    if (!isDeviceExists) {
       _newDeviceDetectedEmail = email;
       _newDeviceDetectedPassword = password;
 
-      await _otp.insert(otp);
+      await _otp.insert(email);
       return SignInResult.newDeviceDetected;
     }
 
-    final testCredientialResult = await _auth.testCredentials(email, password);
-
-    if (testCredientialResult == TestCredientialResult.invalid) return SignInResult.invalidCredentials;
-    if (testCredientialResult == TestCredientialResult.userDisabled) return SignInResult.userDisabled;
-    if (testCredientialResult == TestCredientialResult.tooManyRequests) return SignInResult.tooManyRequests;
-
     final signInWithEmailAndPasswordResult = await _auth.signInWithEmailAndPassword(email, password);
 
-    await _device.update(userId, isSignedIn: true, lastSignInTime: DateTime.now().millisecondsSinceEpoch);
     await _localDevice.update(userId, isSignedIn: true, lastSignInTime: DateTime.now().millisecondsSinceEpoch);
+    await _device.update(userId, isSignedIn: true, lastSignInTime: DateTime.now().millisecondsSinceEpoch);
 
     return switch (signInWithEmailAndPasswordResult) {
       SignInWithEmailAndPasswordResult.invalidCredentials => SignInResult.invalidCredentials,
@@ -178,11 +174,6 @@ class SignInServiceImpl implements SignInService {
 
     if (otp.isEmpty) return SignInOtpResult.emptyOtp;
     if (!_network.isReachable) return SignInOtpResult.noInternet;
-
-    if (await _rateLimite.isExists(RateLimiteFeature.newDeviceDetected)) {
-      return SignInOtpResult.tooManyRequests;
-    }
-    await _rateLimite.recordHit(RateLimiteFeature.newDeviceDetected);
 
     otp = sha256.convert(utf8.encode(otp)).toString();
     final remoteOtp = await _otp.get(email);
@@ -244,13 +235,7 @@ class SignInServiceImpl implements SignInService {
 
     if (!_network.isReachable) return SignInNewOtpResult.noInternet;
 
-    if (await _rateLimite.isExists(RateLimiteFeature.newDeviceOtpRequest)) {
-      return SignInNewOtpResult.tooManyRequests;
-    }
-    await _rateLimite.recordHit(RateLimiteFeature.newDeviceOtpRequest);
-
-    final otp = Otp(email: email, createdAt: DateTime.now().millisecondsSinceEpoch, deviceId: _deviceInfo.identifier);
-    await _otp.insert(otp);
+    await _otp.insert(email);
 
     return SignInNewOtpResult.success;
   }

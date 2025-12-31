@@ -27,7 +27,7 @@
 // is a violation of applicable intellectual property laws and will result
 // in legal action.
 
-enum RateLimiteFeature { newDeviceDetected, newDeviceOtpRequest, resetPassword, resetPasswordOtpRequest }
+enum RateLimiteFeature { newDeviceDetected, newDeviceOtpRequest, resetPassword }
 
 class RateLimiteState {
   final int count;

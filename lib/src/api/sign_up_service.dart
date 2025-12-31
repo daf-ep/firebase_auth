@@ -32,20 +32,21 @@ import 'package:flutter/material.dart';
 import 'package:injectable/injectable.dart';
 import 'package:string_validator/string_validator.dart';
 
-import '../../helpers/local.dart';
+import '../../extensions/local.dart';
 import '../../models/auth/credentials.dart';
 import '../../models/auth/password_policy.dart';
 import '../../models/user/device.dart';
 import '../../models/user/metadata.dart';
+import '../../models/user/preferred_language.dart';
 import '../../models/user/user.dart';
 import '../../results/auth.dart';
 import '../../results/password_validator.dart';
 import '../../results/sign_up.dart';
-import '../device/device_info_service.dart';
-import '../device/network_service.dart';
-import '../firebase/auth/auth_service.dart';
-import '../firebase/database/user_service.dart';
-import '../local_storage/services/user_service.dart';
+import '../internal/device/device_info_service.dart';
+import '../internal/device/network_service.dart';
+import '../internal/local/user_service.dart';
+import '../internal/remote/auth/auth_service.dart';
+import '../internal/remote/database/user_service.dart';
 import 'validator_service.dart';
 
 abstract class SignUpService {
@@ -61,22 +62,28 @@ abstract class SignUpService {
   /// - or an authentication-layer failure (e.g. account already exists).
   ///
   /// This method is asynchronous and safe to call from UI or domain layers.
-  Future<SignUpResult> signUpWithEmailAndPassword({required Credentials credentials, required UserData data});
+  Future<SignUpResult> signUpWithEmailAndPassword({
+    required Credentials credentials,
+    required Map<String, dynamic> data,
+  });
 }
 
 @Singleton(as: SignUpService)
 class SignUpServiceImpl implements SignUpService {
   final DeviceInfoService _deviceInfo;
   final NetworkService _network;
-  final AuthService _auth;
-  final UserService _user;
+  final RemoteAuthService _auth;
+  final RemoteUserService _user;
   final LocalUserService _localUser;
   final ValidatorService _validator;
 
   SignUpServiceImpl(this._deviceInfo, this._network, this._auth, this._user, this._localUser, this._validator);
 
   @override
-  Future<SignUpResult> signUpWithEmailAndPassword({required Credentials credentials, required UserData data}) async {
+  Future<SignUpResult> signUpWithEmailAndPassword({
+    required Credentials credentials,
+    required Map<String, dynamic> data,
+  }) async {
     final policy = credentials.passwordPolicy ?? PasswordPolicy(min: 6);
 
     final email = credentials.email;
@@ -143,11 +150,12 @@ class SignUpServiceImpl implements SignUpService {
         updatedAt: DateTime.now().millisecondsSinceEpoch,
         lastSignInTime: DateTime.now().millisecondsSinceEpoch,
       ),
+      preferredLanguage: PreferredLanguage(current: PlatformDispatcher.instance.locale.convert(), histories: []),
       data: data,
     );
 
-    await _user.add(user);
     await _localUser.add(user);
+    await _user.add(user);
 
     return SignUpResult.success;
   }

@@ -14,32 +14,32 @@ import 'package:fiber_firebase_auth/src/api/sign_in_service.dart' as _i60;
 import 'package:fiber_firebase_auth/src/api/sign_up_service.dart' as _i865;
 import 'package:fiber_firebase_auth/src/api/user_service.dart' as _i597;
 import 'package:fiber_firebase_auth/src/api/validator_service.dart' as _i58;
-import 'package:fiber_firebase_auth/src/app/app_info_service.dart' as _i274;
-import 'package:fiber_firebase_auth/src/device/device_info_service.dart'
-    as _i124;
-import 'package:fiber_firebase_auth/src/device/network_service.dart' as _i879;
-import 'package:fiber_firebase_auth/src/firebase/auth/auth_service.dart'
-    as _i1001;
-import 'package:fiber_firebase_auth/src/firebase/database/device_service.dart'
-    as _i178;
-import 'package:fiber_firebase_auth/src/firebase/database/otp_service.dart'
-    as _i539;
-import 'package:fiber_firebase_auth/src/firebase/database/rate_limite.dart'
-    as _i929;
-import 'package:fiber_firebase_auth/src/firebase/database/remote_version_service.dart'
-    as _i1000;
-import 'package:fiber_firebase_auth/src/firebase/database/user_id_service.dart'
-    as _i1065;
-import 'package:fiber_firebase_auth/src/firebase/database/user_service.dart'
-    as _i944;
-import 'package:fiber_firebase_auth/src/local_storage/services/device_service.dart'
-    as _i540;
-import 'package:fiber_firebase_auth/src/local_storage/services/local_version_service.dart'
-    as _i927;
-import 'package:fiber_firebase_auth/src/local_storage/services/rate_limite.dart'
-    as _i75;
-import 'package:fiber_firebase_auth/src/local_storage/services/user_service.dart'
-    as _i687;
+import 'package:fiber_firebase_auth/src/internal/app/app_info_service.dart'
+    as _i865;
+import 'package:fiber_firebase_auth/src/internal/device/device_info_service.dart'
+    as _i348;
+import 'package:fiber_firebase_auth/src/internal/device/network_service.dart'
+    as _i484;
+import 'package:fiber_firebase_auth/src/internal/local/device_service.dart'
+    as _i592;
+import 'package:fiber_firebase_auth/src/internal/local/local_version_service.dart'
+    as _i606;
+import 'package:fiber_firebase_auth/src/internal/local/rate_limite.dart'
+    as _i907;
+import 'package:fiber_firebase_auth/src/internal/local/user_service.dart'
+    as _i816;
+import 'package:fiber_firebase_auth/src/internal/remote/auth/auth_service.dart'
+    as _i455;
+import 'package:fiber_firebase_auth/src/internal/remote/cloud_functions/otp_service.dart'
+    as _i807;
+import 'package:fiber_firebase_auth/src/internal/remote/database/device_service.dart'
+    as _i454;
+import 'package:fiber_firebase_auth/src/internal/remote/database/remote_version_service.dart'
+    as _i96;
+import 'package:fiber_firebase_auth/src/internal/remote/database/user_id_service.dart'
+    as _i294;
+import 'package:fiber_firebase_auth/src/internal/remote/database/user_service.dart'
+    as _i41;
 import 'package:get_it/get_it.dart' as _i174;
 import 'package:injectable/injectable.dart' as _i526;
 
@@ -50,95 +50,97 @@ extension GetItInjectableX on _i174.GetIt {
     _i526.EnvironmentFilter? environmentFilter,
   }) {
     final gh = _i526.GetItHelper(this, environment, environmentFilter);
-    gh.singleton<_i879.NetworkService>(
-      () => _i879.NetworkServiceImpl()..init(),
+    gh.singleton<_i484.NetworkService>(
+      () => _i484.NetworkServiceImpl()..init(),
     );
-    gh.singleton<_i124.DeviceInfoService>(
-      () => _i124.DeviceInfoServiceImpl(gh<_i879.NetworkService>())..init(),
+    gh.singleton<_i348.DeviceInfoService>(
+      () => _i348.DeviceInfoServiceImpl(gh<_i484.NetworkService>())..init(),
+    );
+    gh.singleton<_i455.RemoteAuthService>(
+      () => _i455.RemoteAuthServiceImpl()..init(),
     );
     gh.singleton<_i58.ValidatorService>(() => _i58.ValidatorServiceImpl());
-    gh.singleton<_i1001.AuthService>(() => _i1001.AuthServiceImpl()..init());
-    gh.singleton<_i274.AppInfoService>(
-      () => _i274.AppInfoServiceImpl()..init(),
+    gh.singleton<_i865.AppInfoService>(
+      () => _i865.AppInfoServiceImpl()..init(),
     );
-    gh.singleton<_i1065.UserIdService>(() => _i1065.UserIdServiceImpl());
-    gh.singleton<_i1000.RemoteVersionService>(
-      () => _i1000.RemoteVersionServiceImpl(gh<_i1001.AuthService>())..init(),
+    gh.singleton<_i294.RemoteUserIdService>(
+      () => _i294.RemoteUserIdServiceImpl(),
     );
-    gh.singleton<_i539.OtpService>(() => _i539.OtpServiceImpl());
-    gh.singleton<_i944.UserService>(
-      () => _i944.UserServiceImpl(
-        gh<_i1001.AuthService>(),
-        gh<_i124.DeviceInfoService>(),
-      ),
+    gh.singleton<_i606.LocalVersionService>(
+      () =>
+          _i606.LocalVersionServiceImpl(gh<_i455.RemoteAuthService>())..init(),
     );
-    gh.singleton<_i687.LocalUserService>(
-      () => _i687.LocalUserServiceImpl(
-        gh<_i1001.AuthService>(),
-        gh<_i944.UserService>(),
-        gh<_i1000.RemoteVersionService>(),
-      )..init(),
+    gh.singleton<_i96.RemoteVersionService>(
+      () =>
+          _i96.RemoteVersionServiceImpl(gh<_i455.RemoteAuthService>())..init(),
     );
-    gh.singleton<_i927.LocalVersionService>(
-      () => _i927.LocalVersionServiceImpl(gh<_i687.LocalUserService>())..init(),
-    );
-    gh.singleton<_i75.LocalRateLimiteService>(
-      () => _i75.LocalRateLimiteServiceImpl(gh<_i124.DeviceInfoService>()),
-    );
-    gh.singleton<_i178.DeviceService>(
-      () => _i178.DeviceServiceImpl(
-        gh<_i1001.AuthService>(),
-        gh<_i124.DeviceInfoService>(),
-      ),
-    );
-    gh.singleton<_i540.LocalDeviceService>(
-      () => _i540.LocalDeviceServiceImpl(
-        gh<_i1001.AuthService>(),
-        gh<_i687.LocalUserService>(),
-        gh<_i124.DeviceInfoService>(),
-      ),
-    );
-    gh.singleton<_i929.RateLimiteService>(
-      () => _i929.RateLimiteServiceImpl(
-        gh<_i124.DeviceInfoService>(),
-        gh<_i75.LocalRateLimiteService>(),
-      ),
-    );
-    gh.singleton<_i597.UserService>(
-      () => _i597.UserServiceImpl(
-        gh<_i687.LocalUserService>(),
-        gh<_i1001.AuthService>(),
-      )..init(),
-    );
-    gh.singleton<_i865.SignUpService>(
-      () => _i865.SignUpServiceImpl(
-        gh<_i124.DeviceInfoService>(),
-        gh<_i879.NetworkService>(),
-        gh<_i1001.AuthService>(),
-        gh<_i944.UserService>(),
-        gh<_i687.LocalUserService>(),
-        gh<_i58.ValidatorService>(),
-      ),
+    gh.singleton<_i807.RemoteOtpService>(
+      () => _i807.RemoteOtpServiceImpl(gh<_i348.DeviceInfoService>()),
     );
     gh.singleton<_i176.ForgotPasswordService>(
       () => _i176.ForgotPasswordServiceImpl(
-        gh<_i124.DeviceInfoService>(),
-        gh<_i879.NetworkService>(),
-        gh<_i929.RateLimiteService>(),
-        gh<_i1065.UserIdService>(),
-        gh<_i539.OtpService>(),
+        gh<_i348.DeviceInfoService>(),
+        gh<_i484.NetworkService>(),
+        gh<_i294.RemoteUserIdService>(),
+        gh<_i807.RemoteOtpService>(),
+      ),
+    );
+    gh.singleton<_i41.RemoteUserService>(
+      () => _i41.RemoteUserServiceImpl(
+        gh<_i455.RemoteAuthService>(),
+        gh<_i348.DeviceInfoService>(),
+      ),
+    );
+    gh.singleton<_i454.RemoteDeviceService>(
+      () => _i454.RemoteDeviceServiceImpl(
+        gh<_i455.RemoteAuthService>(),
+        gh<_i348.DeviceInfoService>(),
+      ),
+    );
+    gh.singleton<_i907.LocalRateLimiteService>(
+      () => _i907.LocalRateLimiteServiceImpl(gh<_i348.DeviceInfoService>()),
+    );
+    gh.singleton<_i816.LocalUserService>(
+      () => _i816.LocalUserServiceImpl(
+        gh<_i455.RemoteAuthService>(),
+        gh<_i41.RemoteUserService>(),
+        gh<_i96.RemoteVersionService>(),
+      )..init(),
+    );
+    gh.singleton<_i597.UserService>(
+      () => _i597.UserServiceImpl(
+        gh<_i816.LocalUserService>(),
+        gh<_i455.RemoteAuthService>(),
+      )..init(),
+    );
+    gh.singleton<_i592.LocalDeviceService>(
+      () => _i592.LocalDeviceServiceImpl(
+        gh<_i455.RemoteAuthService>(),
+        gh<_i816.LocalUserService>(),
+        gh<_i348.DeviceInfoService>(),
+        gh<_i606.LocalVersionService>(),
       ),
     );
     gh.singleton<_i60.SignInService>(
       () => _i60.SignInServiceImpl(
-        gh<_i124.DeviceInfoService>(),
-        gh<_i879.NetworkService>(),
-        gh<_i1001.AuthService>(),
-        gh<_i178.DeviceService>(),
-        gh<_i540.LocalDeviceService>(),
-        gh<_i539.OtpService>(),
-        gh<_i929.RateLimiteService>(),
-        gh<_i1065.UserIdService>(),
+        gh<_i348.DeviceInfoService>(),
+        gh<_i484.NetworkService>(),
+        gh<_i455.RemoteAuthService>(),
+        gh<_i454.RemoteDeviceService>(),
+        gh<_i592.LocalDeviceService>(),
+        gh<_i807.RemoteOtpService>(),
+        gh<_i294.RemoteUserIdService>(),
+        gh<_i816.LocalUserService>(),
+      ),
+    );
+    gh.singleton<_i865.SignUpService>(
+      () => _i865.SignUpServiceImpl(
+        gh<_i348.DeviceInfoService>(),
+        gh<_i484.NetworkService>(),
+        gh<_i455.RemoteAuthService>(),
+        gh<_i41.RemoteUserService>(),
+        gh<_i816.LocalUserService>(),
+        gh<_i58.ValidatorService>(),
       ),
     );
     return this;

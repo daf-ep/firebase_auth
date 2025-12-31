@@ -30,6 +30,8 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
 
+import 'language.dart';
+
 class UserDeviceConstants {
   static const String deviceInfo = "device_info";
   static const String metadata = "metadata";
@@ -61,44 +63,6 @@ class UserLastKnownPositionConstants {
   static const String ip = "ip";
   static const String city = "city";
   static const String country = "country";
-}
-
-enum UserLanguage {
-  arabic,
-  bulgarian,
-  catalan,
-  chinese,
-  croatian,
-  czech,
-  danish,
-  dutch,
-  english,
-  finnish,
-  french,
-  german,
-  greek,
-  hebrew,
-  hindi,
-  hungarian,
-  indonesian,
-  italian,
-  japanese,
-  korean,
-  lithuanian,
-  malay,
-  norwegian,
-  polish,
-  portuguese,
-  romanian,
-  russian,
-  slovak,
-  slovenian,
-  spanish,
-  swedish,
-  thai,
-  turkish,
-  ukrainian,
-  vietnamese,
 }
 
 /// {@template known_device}
@@ -178,9 +142,9 @@ class UserDevice extends Equatable {
     required this.preferences,
   });
 
-  factory UserDevice.fromMap(Map<String, dynamic> map) {
+  factory UserDevice.fromMap(String deviceId, Map<String, dynamic> map) {
     return UserDevice(
-      deviceId: map[UserDeviceConstants.deviceInfo][UserDeviceInfoConstants.deviceId],
+      deviceId: deviceId,
       deviceInfo: UserDeviceInfo.fromMap(map[UserDeviceConstants.deviceInfo]),
       metadata: UserDeviceMetadata.fromMap(map[UserDeviceConstants.metadata]),
       lastKnownPosition: UserLastKnownPosition.fromMap(map[UserDeviceConstants.lastKnownPosition]),
@@ -323,7 +287,7 @@ class UserDevicePreferences extends Equatable {
   ///
   /// For example, a French user accessing their account from a device set to Russian
   /// might trigger additional verification steps.
-  final UserLanguage language;
+  final Language language;
 
   /// The preferred theme mode (light, dark, or system) configured on the device.
   ///
@@ -342,12 +306,12 @@ class UserDevicePreferences extends Equatable {
 
   factory UserDevicePreferences.fromMap(Map<String, dynamic> map) {
     return UserDevicePreferences(
-      language: UserLanguage.values.byName(map[UserDevicePreferencesConstants.language]),
+      language: Language.values.byName(map[UserDevicePreferencesConstants.language]),
       themeMode: ThemeMode.values.byName(map[UserDevicePreferencesConstants.themeMode]),
     );
   }
 
-  UserDevicePreferences copyWith({UserLanguage? language, ThemeMode? themeMode}) {
+  UserDevicePreferences copyWith({Language? language, ThemeMode? themeMode}) {
     return UserDevicePreferences(language: language ?? this.language, themeMode: themeMode ?? this.themeMode);
   }
 
@@ -532,7 +496,7 @@ class UserDeviceInfo extends Equatable {
       UserDeviceInfoConstants.deviceCategory: deviceCategory.name,
       UserDeviceInfoConstants.isPhysicalDevice: isPhysicalDevice,
       UserDeviceInfoConstants.model: model,
-      UserDeviceInfoConstants.operatingSystem: operatingSystem,
+      UserDeviceInfoConstants.operatingSystem: operatingSystem.name,
     };
   }
 
