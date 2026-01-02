@@ -1,4 +1,4 @@
-// Copyright (C) 2025 Fiber
+// Copyright (C) 2026 Fiber
 //
 // All rights reserved. This script, including its code and logic, is the
 // exclusive property of Fiber. Redistribution, reproduction,
@@ -27,35 +27,16 @@
 // is a violation of applicable intellectual property laws and will result
 // in legal action.
 
-import 'package:firebase_database/firebase_database.dart';
+import 'package:get_it/get_it.dart';
 
-class DatabaseNodes {
-  static DatabaseReference users(String userId) => _database.ref("users/${_DatabaseEncoder.encode(userId)}");
+import 'current_user_service.dart';
+import 'data.dart';
+import 'sessions/sessions.dart';
+import 'user_metadata_service.dart';
 
-  static DatabaseReference emails(String email) => _database.ref("emails/${_DatabaseEncoder.encode(email)}");
-
-  static FirebaseDatabase get _database => FirebaseDatabase.instance;
-}
-
-class _DatabaseEncoder {
-  static const Map<String, String> _replacements = {
-    '.': '_dot_',
-    '#': '_hash_',
-    r'$': '_dollar_',
-    '[': '_lb_',
-    ']': '_rb_',
-  };
-
-  static String encode(String input) {
-    var value = input.trim();
-
-    for (final entry in _replacements.entries) {
-      value = value.replaceAll(entry.key, entry.value);
-    }
-
-    if (value.isEmpty) {
-      throw ArgumentError("RTDB key cannot be empty");
-    }
-    return value;
-  }
+class User {
+  CurrentUserService get current => GetIt.I.get();
+  UserMetadataService get metadata => GetIt.I.get();
+  UserDataService get data => GetIt.I.get();
+  Sessions get sessions => Sessions();
 }

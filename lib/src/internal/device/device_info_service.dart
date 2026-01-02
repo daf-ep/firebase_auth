@@ -40,7 +40,7 @@ import 'package:injectable/injectable.dart';
 import 'package:rxdart/subjects.dart';
 
 import '../../../models/auth/ip_info.dart';
-import '../../../models/user/device.dart';
+import '../../../models/user/session.dart';
 import 'network_service.dart';
 
 @internal

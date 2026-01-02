@@ -27,41 +27,52 @@
 // is a violation of applicable intellectual property laws and will result
 // in legal action.
 
-import 'package:cloud_functions/cloud_functions.dart';
-import 'package:flutter/foundation.dart';
 import 'package:injectable/injectable.dart';
+import 'package:rxdart/subjects.dart';
 
-import '../../../../models/auth/otp.dart';
-import '../../device/device_info_service.dart';
+import '../../../models/observe.dart';
+import '../../internal/auth/user_service.dart';
 
-@internal
-abstract class RemoteOtpService {
-  Future<void> insert(String email);
-
-  Future<Otp?> get(String email);
+abstract class CurrentUserService {
+  Observe<bool> get isUserConnected;
+  Observe<String?> get userId;
+  Future<void> signOut();
 }
 
-@Singleton(as: RemoteOtpService)
-class RemoteOtpServiceImpl implements RemoteOtpService {
-  final DeviceInfoService _deviceInfo;
+@Singleton(as: CurrentUserService)
+class CurrentUserServiceImpl implements CurrentUserService {
+  final AuthUserService _authUser;
 
-  RemoteOtpServiceImpl(this._deviceInfo);
+  CurrentUserServiceImpl(this._authUser);
 
-  @override
-  Future<void> insert(String email) async {
-    final callable = _instance.httpsCallable("askNewDeviceDectectedOtp");
-    await callable.call({'email': email, 'deviceId': _deviceInfo.identifier});
-  }
+  final _isUserConnectedSubject = BehaviorSubject<bool>.seeded(false);
+  final _userIdSubject = BehaviorSubject<String?>.seeded(null);
 
   @override
-  Future<Otp?> get(String email) async {
-    final callable = _instance.httpsCallable("getNewDeviceDectectedOtp");
-    final result = await callable.call({'email': email, 'deviceId': _deviceInfo.identifier});
+  Observe<bool> get isUserConnected =>
+      Observe<bool>(value: _isUserConnectedSubject.value, stream: _isUserConnectedSubject.stream);
 
-    if (result.data == null) return null;
+  @override
+  Observe<String?> get userId => Observe<String?>(value: _userIdSubject.value, stream: _userIdSubject.stream);
 
-    return Otp(hash: result.data['hash'], salt: result.data['salt']);
+  @override
+  Future<void> signOut() => _authUser.signOut();
+
+  @PostConstruct()
+  init() {
+    listenToUserConnected();
+    listenToUserId();
+  }
+}
+
+extension on CurrentUserServiceImpl {
+  void listenToUserConnected() {
+    _authUser.isUserConnected.stream.distinct().listen(
+      (isUserConnected) => _isUserConnectedSubject.value = isUserConnected,
+    );
   }
 
-  final FirebaseFunctions _instance = FirebaseFunctions.instance;
+  void listenToUserId() {
+    _authUser.userId.stream.distinct().listen((userId) => _userIdSubject.value = userId);
+  }
 }

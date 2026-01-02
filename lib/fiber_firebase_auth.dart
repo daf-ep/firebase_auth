@@ -36,13 +36,11 @@ import 'di/di.dart';
 import 'src/api/forgot_password.dart';
 import 'src/api/sign_in_service.dart';
 import 'src/api/sign_up_service.dart';
-import 'src/api/user_service.dart';
-import 'src/api/validator_service.dart';
+import 'src/api/user/user.dart';
 import 'src/internal/local/local_storage.dart';
 
 export './models/auth/credentials.dart';
 export './models/auth/password_policy.dart';
-export './models/user/device.dart';
 export './models/user/metadata.dart';
 export './models/user/user.dart';
 export './results/auth.dart';
@@ -50,6 +48,7 @@ export './results/forgot_password.dart';
 export './results/password_validator.dart';
 export './results/sign_in.dart';
 export './results/sign_up.dart';
+export 'models/user/session.dart';
 
 class FiberAuth {
   static Future<void> initialize() async {
@@ -57,12 +56,11 @@ class FiberAuth {
       await Firebase.initializeApp();
     }
     await configureAuthDependencies();
-    await LocalAuthStorage.initialize();
+    await LocalStorage.initialize();
   }
 
-  static ValidatorService get validator => GetIt.I.get();
   static SignUpService get signUp => GetIt.I.get();
   static SignInService get signIn => GetIt.I.get();
   static ForgotPasswordService get forgotPassword => GetIt.I.get();
-  static UserService get user => GetIt.I.get();
+  static User get user => User();
 }

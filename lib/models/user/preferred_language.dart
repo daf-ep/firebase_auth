@@ -57,6 +57,10 @@ class PreferredLanguage extends Equatable {
     );
   }
 
+  PreferredLanguage copyWith({Language? current, List<PreferredLanguageHistory>? histories}) {
+    return PreferredLanguage(current: current ?? this.current, histories: histories ?? this.histories);
+  }
+
   Map<String, dynamic> toMap() {
     return {
       PreferredLanguageConstants.current: current.name,

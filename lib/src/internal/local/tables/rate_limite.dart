@@ -32,11 +32,11 @@ import 'package:flutter/foundation.dart';
 
 @internal
 class RateLimiteTable extends Table {
-  TextColumn get deviceId => text()();
+  TextColumn get key => text()();
   TextColumn get feature => text()();
   IntColumn get count => integer()();
-  IntColumn get createdAt => integer()();
+  IntColumn get resetAt => integer()();
 
   @override
-  Set<Column> get primaryKey => {deviceId, feature};
+  Set<Column> get primaryKey => {key, feature};
 }

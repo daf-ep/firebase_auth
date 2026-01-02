@@ -27,73 +27,27 @@
 // is a violation of applicable intellectual property laws and will result
 // in legal action.
 
-import 'dart:convert';
-
-import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:injectable/injectable.dart';
 import 'package:string_validator/string_validator.dart';
 
 import '../../extensions/local.dart';
-import '../../models/user/device.dart';
+import '../../models/auth/rate_limite.dart';
+import '../../models/user/session.dart';
 import '../../results/auth.dart';
 import '../../results/sign_in.dart';
+import '../internal/auth/rate_limite/rate_limite_service.dart';
+import '../internal/auth/sign_in_service.dart';
+import '../internal/auth/user_service.dart';
 import '../internal/device/device_info_service.dart';
 import '../internal/device/network_service.dart';
-import '../internal/local/device_service.dart';
-import '../internal/local/user_service.dart';
-import '../internal/remote/auth/auth_service.dart';
-import '../internal/remote/cloud_functions/otp_service.dart';
-import '../internal/remote/database/device_service.dart';
-import '../internal/remote/database/user_id_service.dart';
+import '../internal/user/metadata/metadata_service.dart';
+import '../internal/user/sessions/sessions_service.dart';
 
 abstract class SignInService {
-  /// Authenticates a user using an email address and password.
-  ///
-  /// This method validates the provided credentials, checks network
-  /// availability, and determines whether the sign-in attempt originates
-  /// from a known or a new device.
-  ///
-  /// If the device is already associated with a user, the method proceeds
-  /// with a standard authentication flow.
-  ///
-  /// If the device is detected as new, the sign-in process is paused and
-  /// an OTP-based verification flow is initiated to confirm the device.
-  ///
-  /// The returned [SignInResult] describes the outcome of the operation,
-  /// including validation errors, authentication failures, or the need
-  /// for additional verification.
   Future<SignInResult> signInWithEmailAndPassword(String email, String password);
-
-  /// Verifies a one-time password (OTP) for a newly detected device.
-  ///
-  /// This method completes the sign-in flow that was previously interrupted
-  /// due to a new device detection.
-  ///
-  /// The provided [otp] is validated against the remotely stored value,
-  /// subject to rate-limiting constraints.
-  ///
-  /// On successful verification:
-  /// - the user is authenticated,
-  /// - the new device is registered for the user,
-  /// - local and remote device state is updated accordingly.
-  ///
-  /// The returned [SignInOtpResult] reflects whether the verification
-  /// succeeded or failed (e.g. invalid, expired, or rate-limited).
   Future<SignInOtpResult> verifyOtp(String otp);
-
-  /// Requests a new one-time password (OTP) for a pending new-device
-  /// authentication flow.
-  ///
-  /// This method is intended to be called when the user did not receive
-  /// or has lost the previous OTP.
-  ///
-  /// The request is subject to rate limiting to prevent abuse. On success,
-  /// a new OTP is generated and stored remotely.
-  ///
-  /// The returned [SignInNewOtpResult] indicates whether the request
-  /// was accepted, rate-limited, or failed due to connectivity issues.
   Future<SignInNewOtpResult> askNewOtp();
 }
 
@@ -101,22 +55,20 @@ abstract class SignInService {
 class SignInServiceImpl implements SignInService {
   final DeviceInfoService _deviceInfo;
   final NetworkService _network;
-  final RemoteAuthService _auth;
-  final RemoteDeviceService _device;
-  final LocalDeviceService _localDevice;
-  final RemoteOtpService _otp;
-  final RemoteUserIdService _userId;
-  final LocalUserService _localUser;
+  final AuthUserService _authUser;
+  final RateLimiteService _rateLimite;
+  final SessionsService _userSessions;
+  final AuthSignInService _authSignIn;
+  final UserMetadataService _userMetadata;
 
   SignInServiceImpl(
     this._deviceInfo,
     this._network,
-    this._auth,
-    this._device,
-    this._localDevice,
-    this._otp,
-    this._userId,
-    this._localUser,
+    this._authUser,
+    this._rateLimite,
+    this._userSessions,
+    this._authSignIn,
+    this._userMetadata,
   );
 
   String? _newDeviceDetectedEmail;
@@ -133,25 +85,24 @@ class SignInServiceImpl implements SignInService {
     if (!_network.isReachable) return SignInResult.noInternet;
 
     final deviceId = _deviceInfo.identifier;
-    final userId = await _userId.getByEmail(email);
-    if (userId == null) {
-      await _localUser.deleteByEmail(email);
-      return SignInResult.invalidCredentials;
-    }
+    final userId = await _authUser.getUserId(email);
+    if (userId == null) return SignInResult.invalidCredentials;
 
-    final isDeviceExists = await _device.isExists(userId, deviceId);
+    if (await _rateLimite.isRateLimited(RateLimite.signIn, deviceId)) return SignInResult.tooManyRequests;
+
+    final isDeviceExists = await _userSessions.isExists(deviceId);
     if (!isDeviceExists) {
       _newDeviceDetectedEmail = email;
       _newDeviceDetectedPassword = password;
 
-      await _otp.insert(email);
+      await _rateLimite.isRateLimited(RateLimite.newDeviceOtpRequest, email);
+      await _authSignIn.askOtp(email);
       return SignInResult.newDeviceDetected;
     }
 
-    final signInWithEmailAndPasswordResult = await _auth.signInWithEmailAndPassword(email, password);
-
-    await _localDevice.update(userId, isSignedIn: true, lastSignInTime: DateTime.now().millisecondsSinceEpoch);
-    await _device.update(userId, isSignedIn: true, lastSignInTime: DateTime.now().millisecondsSinceEpoch);
+    final signInWithEmailAndPasswordResult = await _authSignIn.signInWithEmailAndPassword(email, password);
+    await _userSessions.update(isSignedIn: true, lastSignInTime: DateTime.now().millisecondsSinceEpoch);
+    await _userMetadata.update(lastSignInTime: DateTime.now().millisecondsSinceEpoch);
 
     return switch (signInWithEmailAndPasswordResult) {
       SignInWithEmailAndPasswordResult.invalidCredentials => SignInResult.invalidCredentials,
@@ -175,12 +126,15 @@ class SignInServiceImpl implements SignInService {
     if (otp.isEmpty) return SignInOtpResult.emptyOtp;
     if (!_network.isReachable) return SignInOtpResult.noInternet;
 
-    otp = sha256.convert(utf8.encode(otp)).toString();
-    final remoteOtp = await _otp.get(email);
+    final deviceId = _deviceInfo.identifier;
 
-    if (otp != remoteOtp) return SignInOtpResult.invalidOrExpired;
+    if (await _rateLimite.isRateLimited(RateLimite.newDeviceOtpRequest, deviceId)) {
+      return SignInOtpResult.tooManyRequests;
+    }
 
-    final signInWithEmailAndPasswordResult = await _auth.signInWithEmailAndPassword(email, password);
+    if (!await _authSignIn.verify(email, otp)) return SignInOtpResult.invalidOrExpired;
+
+    final signInWithEmailAndPasswordResult = await _authSignIn.signInWithEmailAndPassword(email, password);
     if (signInWithEmailAndPasswordResult.isError) {
       return switch (signInWithEmailAndPasswordResult) {
         SignInWithEmailAndPasswordResult.invalidCredentials ||
@@ -193,27 +147,27 @@ class SignInServiceImpl implements SignInService {
       };
     }
 
-    final device = UserDevice(
+    final device = Session(
       deviceId: _deviceInfo.identifier,
-      deviceInfo: UserDeviceInfo(
+      deviceInfo: DeviceInfo(
         deviceId: _deviceInfo.identifier,
         operatingSystem: _deviceInfo.operatingSystem,
         deviceCategory: _deviceInfo.device,
         isPhysicalDevice: _deviceInfo.isPhysical,
         model: _deviceInfo.model,
       ),
-      metadata: UserDeviceMetadata(
+      metadata: SessionMetadata(
         createdAt: DateTime.now().millisecondsSinceEpoch,
         updatedAt: DateTime.now().millisecondsSinceEpoch,
         isSignedIn: true,
         lastSignInTime: DateTime.now().millisecondsSinceEpoch,
       ),
-      lastKnownPosition: UserLastKnownPosition(
+      networkLocation: NetworkLocation(
         city: _deviceInfo.ipInfo?.city,
         country: _deviceInfo.ipInfo?.country,
         ip: _deviceInfo.ipInfo?.ip,
       ),
-      preferences: UserDevicePreferences(
+      preferences: SessionPreferences(
         language: PlatformDispatcher.instance.locale.convert(),
         themeMode: (WidgetsBinding.instance.platformDispatcher.platformBrightness == Brightness.dark)
             ? ThemeMode.dark
@@ -221,8 +175,8 @@ class SignInServiceImpl implements SignInService {
       ),
     );
 
-    _device.add(device);
-    _localDevice.add(device);
+    await _userSessions.add(device);
+    await _userMetadata.update(lastSignInTime: DateTime.now().millisecondsSinceEpoch);
 
     return SignInOtpResult.success;
   }
@@ -235,7 +189,16 @@ class SignInServiceImpl implements SignInService {
 
     if (!_network.isReachable) return SignInNewOtpResult.noInternet;
 
-    await _otp.insert(email);
+    final deviceId = _deviceInfo.identifier;
+
+    if (await _rateLimite.isRateLimited(RateLimite.newDeviceOtpRequest, deviceId)) {
+      return SignInNewOtpResult.tooManyRequests;
+    }
+
+    final userId = await _authUser.getUserId(email);
+    if (userId == null) return SignInNewOtpResult.userNotFound;
+
+    await _authSignIn.askOtp(email);
 
     return SignInNewOtpResult.success;
   }

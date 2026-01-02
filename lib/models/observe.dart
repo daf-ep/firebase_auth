@@ -1,4 +1,4 @@
-// Copyright (C) 2025 Fiber
+// Copyright (C) 2026 Fiber
 //
 // All rights reserved. This script, including its code and logic, is the
 // exclusive property of Fiber. Redistribution, reproduction,
@@ -27,35 +27,9 @@
 // is a violation of applicable intellectual property laws and will result
 // in legal action.
 
-import 'package:firebase_database/firebase_database.dart';
+class Observe<T> {
+  final T value;
+  final Stream<T> stream;
 
-class DatabaseNodes {
-  static DatabaseReference users(String userId) => _database.ref("users/${_DatabaseEncoder.encode(userId)}");
-
-  static DatabaseReference emails(String email) => _database.ref("emails/${_DatabaseEncoder.encode(email)}");
-
-  static FirebaseDatabase get _database => FirebaseDatabase.instance;
-}
-
-class _DatabaseEncoder {
-  static const Map<String, String> _replacements = {
-    '.': '_dot_',
-    '#': '_hash_',
-    r'$': '_dollar_',
-    '[': '_lb_',
-    ']': '_rb_',
-  };
-
-  static String encode(String input) {
-    var value = input.trim();
-
-    for (final entry in _replacements.entries) {
-      value = value.replaceAll(entry.key, entry.value);
-    }
-
-    if (value.isEmpty) {
-      throw ArgumentError("RTDB key cannot be empty");
-    }
-    return value;
-  }
+  Observe({required this.value, required this.stream});
 }

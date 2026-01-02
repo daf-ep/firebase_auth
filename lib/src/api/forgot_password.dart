@@ -30,38 +30,27 @@
 import 'package:injectable/injectable.dart';
 import 'package:string_validator/string_validator.dart';
 
-import '../../models/auth/password_policy.dart';
+import '../../models/auth/rate_limite.dart';
 import '../../results/forgot_password.dart';
+import '../internal/auth/forgot_password_service.dart';
+import '../internal/auth/rate_limite/rate_limite_service.dart';
+import '../internal/auth/user_service.dart';
 import '../internal/device/device_info_service.dart';
 import '../internal/device/network_service.dart';
-import '../internal/remote/cloud_functions/otp_service.dart';
-import '../internal/remote/database/user_id_service.dart';
 
 abstract class ForgotPasswordService {
   Future<ForgotPasswordResult> reset(String email);
-
-  Future<ForgotPasswordOtpResult> verifyOtp(String otp);
-
-  Future<ForgotPasswordNewOtpResult> askNewOtp();
-
-  Future<ForgotPasswordUpdatePasswordResult> updatePassword(
-    String email,
-    String newPassword,
-    String confirmPassword, {
-    PasswordPolicy? passwordPolicy,
-  });
 }
 
 @Singleton(as: ForgotPasswordService)
 class ForgotPasswordServiceImpl implements ForgotPasswordService {
   final DeviceInfoService _deviceInfo;
   final NetworkService _network;
-  final RemoteUserIdService _userId;
-  final RemoteOtpService _otp;
+  final AuthForgotPasswordService _forgotPassword;
+  final AuthUserService _authUser;
+  final RateLimiteService _rateLimite;
 
-  ForgotPasswordServiceImpl(this._deviceInfo, this._network, this._userId, this._otp);
-
-  String? _resetPasswordEmail;
+  ForgotPasswordServiceImpl(this._deviceInfo, this._network, this._forgotPassword, this._authUser, this._rateLimite);
 
   @override
   Future<ForgotPasswordResult> reset(String email) async {
@@ -71,35 +60,16 @@ class ForgotPasswordServiceImpl implements ForgotPasswordService {
     if (!email.isEmail) return ForgotPasswordResult.invalidEmailFormat;
     if (!_network.isReachable) return ForgotPasswordResult.noInternet;
 
-    final userId = await _userId.getByEmail(email);
+    final deviceId = _deviceInfo.identifier;
+    if (await _rateLimite.isRateLimited(RateLimite.resetPassword, deviceId)) {
+      return ForgotPasswordResult.tooManyRequests;
+    }
+
+    final userId = await _authUser.getUserId(email);
     if (userId == null) return ForgotPasswordResult.userNotFound;
 
-    _resetPasswordEmail = email;
-
-    await _otp.insert(email);
+    await _forgotPassword.reset(email);
 
     return ForgotPasswordResult.success;
-  }
-
-  @override
-  Future<ForgotPasswordOtpResult> verifyOtp(String otp) async {
-    otp = otp.trim();
-
-    return ForgotPasswordOtpResult.success;
-  }
-
-  @override
-  Future<ForgotPasswordNewOtpResult> askNewOtp() async {
-    return ForgotPasswordNewOtpResult.success;
-  }
-
-  @override
-  Future<ForgotPasswordUpdatePasswordResult> updatePassword(
-    String email,
-    String newPassword,
-    String confirmPassword, {
-    PasswordPolicy? passwordPolicy,
-  }) async {
-    return ForgotPasswordUpdatePasswordResult.success;
   }
 }

@@ -1,4 +1,4 @@
-// Copyright (C) 2025 Fiber
+// Copyright (C) 2026 Fiber
 //
 // All rights reserved. This script, including its code and logic, is the
 // exclusive property of Fiber. Redistribution, reproduction,
@@ -27,35 +27,44 @@
 // is a violation of applicable intellectual property laws and will result
 // in legal action.
 
-import 'package:firebase_database/firebase_database.dart';
+import 'package:flutter/foundation.dart';
+import 'package:injectable/injectable.dart';
 
-class DatabaseNodes {
-  static DatabaseReference users(String userId) => _database.ref("users/${_DatabaseEncoder.encode(userId)}");
+import '../../../../models/observe.dart';
+import '../../auth/auth.dart';
+import 'local_service.dart';
+import 'remote_service.dart';
 
-  static DatabaseReference emails(String email) => _database.ref("emails/${_DatabaseEncoder.encode(email)}");
+@internal
+abstract class VersionService {
+  Observe<int?> get local;
 
-  static FirebaseDatabase get _database => FirebaseDatabase.instance;
+  Observe<int?> get remote;
+
+  Future<void> upgrade();
 }
 
-class _DatabaseEncoder {
-  static const Map<String, String> _replacements = {
-    '.': '_dot_',
-    '#': '_hash_',
-    r'$': '_dollar_',
-    '[': '_lb_',
-    ']': '_rb_',
-  };
+@Singleton(as: VersionService)
+class VersionServiceImpl implements VersionService {
+  final LocalVersionService _local;
+  final RemoteVersionService _remote;
 
-  static String encode(String input) {
-    var value = input.trim();
+  VersionServiceImpl(this._local, this._remote);
 
-    for (final entry in _replacements.entries) {
-      value = value.replaceAll(entry.key, entry.value);
-    }
+  @override
+  Observe<int?> get local => _local.version;
 
-    if (value.isEmpty) {
-      throw ArgumentError("RTDB key cannot be empty");
-    }
-    return value;
+  @override
+  Observe<int?> get remote => _remote.version;
+
+  @override
+  Future<void> upgrade() async {
+    final userId = AuthServices.user.userId.value;
+    if (userId == null) return;
+
+    await _local.upgrade();
+    await _remote.upgrade();
+
+    return;
   }
 }

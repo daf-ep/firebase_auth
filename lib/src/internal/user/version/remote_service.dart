@@ -1,4 +1,4 @@
-// Copyright (C) 2025 Fiber
+// Copyright (C) 2026 Fiber
 //
 // All rights reserved. This script, including its code and logic, is the
 // exclusive property of Fiber. Redistribution, reproduction,
@@ -29,69 +29,72 @@
 
 import 'dart:async';
 
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart';
 import 'package:injectable/injectable.dart';
 import 'package:rxdart/subjects.dart';
 
 import '../../../../helpers/database.dart';
+import '../../../../models/observe.dart';
 import '../../../../models/user/user.dart';
-import '../auth/auth_service.dart';
+import '../../auth/auth.dart';
 
 @internal
 abstract class RemoteVersionService {
-  /// Latest known version of the user record.
-  ///
-  /// This value reflects the `version` field stored remotely for the
-  /// currently authenticated user. It may be `null` if the user is
-  /// not authenticated or if the version has not yet been resolved.
-  int? get version;
+  Observe<int?> get version;
 
-  /// Reactive stream of the user record version.
-  ///
-  /// Emits whenever the remote user version changes, allowing
-  /// consumers to react to schema migrations, forced refreshes,
-  /// or compatibility updates.
-  Stream<int?> get versionStream;
+  Future<void> upgrade();
 }
 
 @Singleton(as: RemoteVersionService)
 class RemoteVersionServiceImpl implements RemoteVersionService {
-  final RemoteAuthService _auth;
-
-  RemoteVersionServiceImpl(this._auth);
-
   final _versionSubject = BehaviorSubject<int?>.seeded(null);
 
   @override
-  int? get version => _versionSubject.value;
+  Observe<int?> get version => Observe<int?>(value: _versionSubject.value, stream: _versionSubject.stream);
 
   @override
-  Stream<int?> get versionStream => _versionSubject.stream;
+  Future<void> upgrade() async {
+    final userId = AuthServices.user.userId.value;
+    if (userId == null) return;
+
+    await DatabaseNodes.users(userId).child(UserConstants.version).set(ServerValue.increment(1));
+  }
 
   @PostConstruct()
   init() async {
     listenToRemoteVersion();
   }
 
-  StreamSubscription<int?>? versionSub;
+  StreamSubscription<int?>? _versionSub;
 }
 
 extension on RemoteVersionServiceImpl {
   void listenToRemoteVersion() {
-    _auth.userIdStream.distinct().listen((userId) {
-      if (userId != null) {
-        final stream = DatabaseNodes.users(userId).child(UserConstants.version).onValue.map((event) {
-          final raw = event.snapshot.value;
-          if (raw is! int) return null;
+    AuthServices.user.userId.stream
+        .distinct((prev, next) {
+          if (prev == next) return true;
+          return false;
+        })
+        .listen((userId) {
+          _versionSub?.cancel();
+          _versionSub = null;
 
-          return raw;
+          if (userId != null) {
+            final stream = DatabaseNodes.users(userId).child(UserConstants.version).onValue.map((event) {
+              final raw = event.snapshot.value;
+              if (raw is! int) return null;
+
+              return raw;
+            });
+
+            _versionSub = stream
+                .distinct((prev, next) {
+                  if (prev == next) return true;
+                  return false;
+                })
+                .listen((version) => _versionSubject.value = version);
+          }
         });
-
-        versionSub = stream.distinct().listen((version) => _versionSubject.value = version);
-      } else {
-        versionSub?.cancel();
-        versionSub = null;
-      }
-    });
   }
 }

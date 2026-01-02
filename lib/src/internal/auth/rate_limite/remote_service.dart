@@ -1,4 +1,4 @@
-// Copyright (C) 2025 Fiber
+// Copyright (C) 2026 Fiber
 //
 // All rights reserved. This script, including its code and logic, is the
 // exclusive property of Fiber. Redistribution, reproduction,
@@ -27,36 +27,44 @@
 // is a violation of applicable intellectual property laws and will result
 // in legal action.
 
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/foundation.dart';
 import 'package:injectable/injectable.dart';
 
-import '../../../../helpers/database.dart';
+import '../../../../models/auth/rate_limite.dart';
 
-@internal
-abstract class RemoteUserIdService {
-  /// Resolves the user identifier associated with an email address.
-  ///
-  /// This method performs a lookup using the provided [email] and returns
-  /// the corresponding user ID if the email is known and linked to a user.
-  ///
-  /// A `null` value indicates that:
-  /// - the email address is not registered,
-  /// - no user is associated with the email,
-  /// - or the stored data is missing or invalid.
-  ///
-  /// This method is typically used during authentication and account
-  /// recovery flows to resolve user identity from user-provided input.
-  Future<String?> getByEmail(String email);
+class RateLimiteInfo {
+  final bool isRateLimited;
+  final int? resetAt;
+
+  RateLimiteInfo({required this.isRateLimited, required this.resetAt});
 }
 
-@Singleton(as: RemoteUserIdService)
-class RemoteUserIdServiceImpl implements RemoteUserIdService {
-  @override
-  Future<String?> getByEmail(String email) async {
-    final snapshot = await DatabaseNodes.emails(email).get();
-    final raw = snapshot.value;
-    if (raw is! String) return null;
+@internal
+abstract class RemoteRateLimiteService {
+  Future<RateLimiteInfo> isRateLimited(RateLimite rateLimite, String key);
+}
 
-    return raw;
+@Singleton(as: RemoteRateLimiteService)
+class RemoteRateLimiteServiceImpl implements RemoteRateLimiteService {
+  @override
+  Future<RateLimiteInfo> isRateLimited(RateLimite rateLimite, String key) async {
+    final callable = _instance.httpsCallable('isRateLimited');
+    final result = await callable.call({'rateLimiter': rateLimite.value, 'key': key});
+
+    final data = result.data as Map<String, dynamic>?;
+    return RateLimiteInfo(isRateLimited: data?['limited'] == true, resetAt: data?['resetAt'] as int?);
   }
+
+  final FirebaseFunctions _instance = FirebaseFunctions.instance;
+}
+
+extension on RateLimite {
+  String get value => switch (this) {
+    RateLimite.signIn => 'sign_in',
+    RateLimite.signUp => 'sign_up',
+    RateLimite.newDeviceDetectedVerify => 'new_device_detected_verify',
+    RateLimite.newDeviceOtpRequest => 'new_device_otp_request',
+    RateLimite.resetPassword => 'reset_password',
+  };
 }

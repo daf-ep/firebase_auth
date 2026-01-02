@@ -1,4 +1,4 @@
-// Copyright (C) 2025 Fiber
+// Copyright (C) 2026 Fiber
 //
 // All rights reserved. This script, including its code and logic, is the
 // exclusive property of Fiber. Redistribution, reproduction,
@@ -27,35 +27,43 @@
 // is a violation of applicable intellectual property laws and will result
 // in legal action.
 
-import 'package:firebase_database/firebase_database.dart';
+import 'dart:convert';
 
-class DatabaseNodes {
-  static DatabaseReference users(String userId) => _database.ref("users/${_DatabaseEncoder.encode(userId)}");
+import 'package:drift/drift.dart';
+import 'package:injectable/injectable.dart';
 
-  static DatabaseReference emails(String email) => _database.ref("emails/${_DatabaseEncoder.encode(email)}");
+import '../../auth/auth.dart';
+import '../../local/local_storage.dart';
+import '../user.dart';
 
-  static FirebaseDatabase get _database => FirebaseDatabase.instance;
+abstract class LocalUserMetadataService {
+  Future<void> update({int? lastSignInTime});
 }
 
-class _DatabaseEncoder {
-  static const Map<String, String> _replacements = {
-    '.': '_dot_',
-    '#': '_hash_',
-    r'$': '_dollar_',
-    '[': '_lb_',
-    ']': '_rb_',
-  };
+@Singleton(as: LocalUserMetadataService)
+class LocalUserMetadataServiceImpl implements LocalUserMetadataService {
+  @override
+  Future<void> update({int? lastSignInTime}) async {
+    final userId = AuthServices.user.userId.value;
+    if (userId == null) return;
 
-  static String encode(String input) {
-    var value = input.trim();
+    final user = UserServices.current.data.value;
+    if (user == null) return;
 
-    for (final entry in _replacements.entries) {
-      value = value.replaceAll(entry.key, entry.value);
-    }
+    if (lastSignInTime == null) return;
 
-    if (value.isEmpty) {
-      throw ArgumentError("RTDB key cannot be empty");
-    }
-    return value;
+    final updatedUser = user.copyWith(
+      metadata: user.metadata.copyWith(
+        updatedAt: DateTime.now().millisecondsSinceEpoch,
+        lastSignInTime: lastSignInTime,
+      ),
+    );
+
+    await (_db.update(_table)..where((tbl) => tbl.userId.equals(userId))).write(
+      UserTableCompanion(data: Value(json.encode(updatedUser.toMap()))),
+    );
   }
+
+  LocalStorage get _db => LocalStorage.instance;
+  $UserTableTable get _table => _db.userTable;
 }

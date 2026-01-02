@@ -1,4 +1,4 @@
-// Copyright (C) 2025 Fiber
+// Copyright (C) 2026 Fiber
 //
 // All rights reserved. This script, including its code and logic, is the
 // exclusive property of Fiber. Redistribution, reproduction,
@@ -27,35 +27,42 @@
 // is a violation of applicable intellectual property laws and will result
 // in legal action.
 
-import 'package:firebase_database/firebase_database.dart';
+import 'package:injectable/injectable.dart';
+import 'package:rxdart/subjects.dart';
 
-class DatabaseNodes {
-  static DatabaseReference users(String userId) => _database.ref("users/${_DatabaseEncoder.encode(userId)}");
+import '../../../../models/observe.dart';
+import '../../../../models/user/session.dart';
+import '../../../internal/user/user/current_user_service.dart';
 
-  static DatabaseReference emails(String email) => _database.ref("emails/${_DatabaseEncoder.encode(email)}");
-
-  static FirebaseDatabase get _database => FirebaseDatabase.instance;
+abstract class AllSessionsService {
+  Observe<List<Session>?> get sessions;
 }
 
-class _DatabaseEncoder {
-  static const Map<String, String> _replacements = {
-    '.': '_dot_',
-    '#': '_hash_',
-    r'$': '_dollar_',
-    '[': '_lb_',
-    ']': '_rb_',
-  };
+@Singleton(as: AllSessionsService)
+class AllSessionsServiceImpl implements AllSessionsService {
+  final CurrentUserService _currentUser;
 
-  static String encode(String input) {
-    var value = input.trim();
+  AllSessionsServiceImpl(this._currentUser);
 
-    for (final entry in _replacements.entries) {
-      value = value.replaceAll(entry.key, entry.value);
-    }
+  final _sessionsSubject = BehaviorSubject<List<Session>?>.seeded(null);
 
-    if (value.isEmpty) {
-      throw ArgumentError("RTDB key cannot be empty");
-    }
-    return value;
+  @override
+  Observe<List<Session>?> get sessions =>
+      Observe<List<Session>?>(value: _sessionsSubject.value, stream: _sessionsSubject.stream);
+
+  @PostConstruct()
+  init() {
+    listenToSessions();
+  }
+}
+
+extension on AllSessionsServiceImpl {
+  void listenToSessions() {
+    _currentUser.data.stream
+        .distinct((prev, next) {
+          if (prev?.metadata.updatedAt == next?.metadata.updatedAt) return true;
+          return false;
+        })
+        .listen((user) => _sessionsSubject.value = user?.sessions);
   }
 }

@@ -1,4 +1,4 @@
-// Copyright (C) 2025 Fiber
+// Copyright (C) 2026 Fiber
 //
 // All rights reserved. This script, including its code and logic, is the
 // exclusive property of Fiber. Redistribution, reproduction,
@@ -27,35 +27,20 @@
 // is a violation of applicable intellectual property laws and will result
 // in legal action.
 
-import 'package:firebase_database/firebase_database.dart';
+import 'package:flutter/foundation.dart';
+import 'package:get_it/get_it.dart';
 
-class DatabaseNodes {
-  static DatabaseReference users(String userId) => _database.ref("users/${_DatabaseEncoder.encode(userId)}");
+import 'forgot_password_service.dart';
+import 'rate_limite/rate_limite_service.dart';
+import 'sign_in_service.dart';
+import 'sign_up_service.dart';
+import 'user_service.dart';
 
-  static DatabaseReference emails(String email) => _database.ref("emails/${_DatabaseEncoder.encode(email)}");
-
-  static FirebaseDatabase get _database => FirebaseDatabase.instance;
-}
-
-class _DatabaseEncoder {
-  static const Map<String, String> _replacements = {
-    '.': '_dot_',
-    '#': '_hash_',
-    r'$': '_dollar_',
-    '[': '_lb_',
-    ']': '_rb_',
-  };
-
-  static String encode(String input) {
-    var value = input.trim();
-
-    for (final entry in _replacements.entries) {
-      value = value.replaceAll(entry.key, entry.value);
-    }
-
-    if (value.isEmpty) {
-      throw ArgumentError("RTDB key cannot be empty");
-    }
-    return value;
-  }
+@internal
+class AuthServices {
+  static AuthSignInService get signIn => GetIt.I.get();
+  static AuthSignUpService get signUp => GetIt.I.get();
+  static AuthForgotPasswordService get forgotPassword => GetIt.I.get();
+  static AuthUserService get user => GetIt.I.get();
+  static RateLimiteService get rateLimite => GetIt.I.get();
 }

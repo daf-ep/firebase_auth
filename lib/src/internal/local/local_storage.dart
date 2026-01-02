@@ -34,7 +34,6 @@ import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:get_it/get_it.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:rxdart/subjects.dart';
@@ -43,9 +42,6 @@ import 'package:sqlite3/open.dart';
 import 'package:sqlite3/sqlite3.dart';
 
 import '../app/app.dart';
-import 'device_service.dart';
-import 'local_version_service.dart';
-import 'user_service.dart';
 import 'tables/rate_limite.dart';
 import 'tables/user.dart';
 
@@ -53,22 +49,22 @@ part 'local_storage.g.dart';
 
 @internal
 @DriftDatabase(tables: [UserTable, RateLimiteTable])
-class LocalAuthStorage extends _$LocalAuthStorage {
-  static LocalAuthStorage? _instance;
+class LocalStorage extends _$LocalStorage {
+  static LocalStorage? _instance;
 
-  factory LocalAuthStorage() {
+  factory LocalStorage() {
     if (_instance == null) {
-      throw StateError('LocalAuthStorage.initialize() must be called before accessing LocalAuthStorage.');
+      throw StateError('LocalStorage.initialize() must be called before accessing LocalStorage.');
     }
     return _instance!;
   }
 
-  LocalAuthStorage._internal() : super(_openConnection());
+  LocalStorage._internal() : super(_openConnection());
 
-  static LocalAuthStorage get instance {
+  static LocalStorage get instance {
     final instance = _instance;
     if (instance == null) {
-      throw StateError('LocalAuthStorage.initialize() must be called before accessing instance.');
+      throw StateError('LocalStorage.initialize() must be called before accessing instance.');
     }
     return instance;
   }
@@ -89,7 +85,7 @@ class LocalAuthStorage extends _$LocalAuthStorage {
       await applyWorkaroundToOpenSqlCipherOnOldAndroidVersions();
       open.overrideFor(OperatingSystem.android, openCipherOnAndroid);
     }
-    _instance ??= LocalAuthStorage._internal();
+    _instance ??= LocalStorage._internal();
     isInitializedSubject.value = true;
   }
 
@@ -117,10 +113,6 @@ class LocalAuthStorage extends _$LocalAuthStorage {
       await createCallback();
     }
   }
-
-  LocalUserService get user => GetIt.I.get();
-  LocalDeviceService get device => GetIt.I.get();
-  LocalVersionService get version => GetIt.I.get();
 }
 
 LazyDatabase _openConnection() {

@@ -1,4 +1,4 @@
-// Copyright (C) 2025 Fiber
+// Copyright (C) 2026 Fiber
 //
 // All rights reserved. This script, including its code and logic, is the
 // exclusive property of Fiber. Redistribution, reproduction,
@@ -27,35 +27,30 @@
 // is a violation of applicable intellectual property laws and will result
 // in legal action.
 
-import 'package:firebase_database/firebase_database.dart';
+import 'package:injectable/injectable.dart';
 
-class DatabaseNodes {
-  static DatabaseReference users(String userId) => _database.ref("users/${_DatabaseEncoder.encode(userId)}");
+import '../user.dart';
+import 'local_service.dart';
+import 'remote_service.dart';
 
-  static DatabaseReference emails(String email) => _database.ref("emails/${_DatabaseEncoder.encode(email)}");
-
-  static FirebaseDatabase get _database => FirebaseDatabase.instance;
+abstract class UserMetadataService {
+  Future<void> update({int? lastSignInTime});
 }
 
-class _DatabaseEncoder {
-  static const Map<String, String> _replacements = {
-    '.': '_dot_',
-    '#': '_hash_',
-    r'$': '_dollar_',
-    '[': '_lb_',
-    ']': '_rb_',
-  };
+@Singleton(as: UserMetadataService)
+class UserMetadataServiceImpl implements UserMetadataService {
+  final LocalUserMetadataService _local;
+  final RemoteUserMetadataService _remote;
 
-  static String encode(String input) {
-    var value = input.trim();
+  UserMetadataServiceImpl(this._local, this._remote);
 
-    for (final entry in _replacements.entries) {
-      value = value.replaceAll(entry.key, entry.value);
-    }
+  @override
+  Future<void> update({int? lastSignInTime}) async {
+    await _local.update(lastSignInTime: lastSignInTime);
+    await _remote.update(lastSignInTime: lastSignInTime);
 
-    if (value.isEmpty) {
-      throw ArgumentError("RTDB key cannot be empty");
-    }
-    return value;
+    await UserServices.version.upgrade();
+
+    return;
   }
 }

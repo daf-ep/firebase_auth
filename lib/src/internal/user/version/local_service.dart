@@ -1,4 +1,4 @@
-// Copyright (C) 2025 Fiber
+// Copyright (C) 2026 Fiber
 //
 // All rights reserved. This script, including its code and logic, is the
 // exclusive property of Fiber. Redistribution, reproduction,
@@ -30,93 +30,82 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
 import 'package:injectable/injectable.dart';
 import 'package:rxdart/subjects.dart';
 
-import '../../../models/user/user.dart';
-import '../remote/auth/auth_service.dart';
-import 'local_storage.dart';
+import '../../../../models/observe.dart';
+import '../../../../models/user/user.dart';
+import '../../auth/auth.dart';
+import '../../local/local_storage.dart';
 
 @internal
 abstract class LocalVersionService {
-  /// Latest locally cached version of the user data.
-  ///
-  /// This value reflects the `version` field stored in local persistence
-  /// for the currently authenticated user.
-  ///
-  /// It may be `null` when:
-  /// - no user is authenticated,
-  /// - no user data is available locally,
-  /// - or the local cache has not yet been initialized.
-  ///
-  /// This getter provides synchronous access to the current version snapshot
-  /// and should be treated as read-only by consumers.
-  int? get version;
+  Observe<int?> get version;
 
-  /// Reactive stream of the locally cached user version.
-  ///
-  /// Emits whenever the local user version changes, including:
-  /// - initial load from local storage,
-  /// - local updates triggered by device or preference changes,
-  /// - synchronization with newer remote data.
-  ///
-  /// Consumers can rely on this stream to detect version changes and
-  /// react accordingly (e.g. trigger remote comparisons or refresh logic).
-  Stream<int?> get versionStream;
+  Future<void> upgrade();
 }
 
 @Singleton(as: LocalVersionService)
 class LocalVersionServiceImpl implements LocalVersionService {
-  final RemoteAuthService _auth;
-
-  LocalVersionServiceImpl(this._auth);
-
   final _versionSubject = BehaviorSubject<int?>.seeded(null);
 
   @override
-  int? get version => _versionSubject.value;
+  Observe<int?> get version => Observe<int?>(value: _versionSubject.value, stream: _versionSubject.stream);
 
   @override
-  Stream<int?> get versionStream => _versionSubject.stream;
+  Future<void> upgrade() async {
+    final userId = AuthServices.user.userId.value;
+    if (userId == null) return;
+
+    final row = await (_db.select(_table)..where((tbl) => tbl.userId.equals(userId))).getSingleOrNull();
+    if (row == null) return;
+
+    final map = json.decode(row.toCompanion(true).data.value) as Map<String, dynamic>;
+    final user = User.fromMap(userId, map);
+    final version = row.version + 1;
+
+    await (_db.update(_table)..where((tbl) => tbl.userId.equals(userId))).write(
+      UserTableCompanion(
+        version: Value(version),
+        data: Value(json.encode(user.copyWith(version: version).toMap())),
+      ),
+    );
+  }
 
   @PostConstruct()
   init() async {
-    listenToLocalVersion();
+    listenToCurrentLocalVersion();
   }
 
-  LocalAuthStorage get _instance => LocalAuthStorage.instance;
-  $UserTableTable get _table => _instance.userTable;
+  LocalStorage get _db => LocalStorage.instance;
+  $UserTableTable get _table => _db.userTable;
 
   StreamSubscription<int?>? _versionSub;
 }
 
 extension on LocalVersionServiceImpl {
-  void listenToLocalVersion() {
-    _auth.userIdStream
+  void listenToCurrentLocalVersion() {
+    AuthServices.user.userId.stream
         .distinct((prev, next) {
           if (prev == next) return true;
           return false;
         })
         .listen((userId) {
-          if (userId == null) {
-            _versionSub?.cancel();
-            _versionSub = null;
-          } else {
-            final userStream = (_instance.select(_table)..where((tbl) => tbl.userId.equals(userId)))
+          _versionSub?.cancel();
+          _versionSub = null;
+
+          if (userId != null) {
+            final versionStream = (_db.select(_table)..where((tbl) => tbl.userId.equals(userId)))
                 .watchSingleOrNull()
                 .asyncMap((row) async {
                   if (row == null) return null;
 
-                  final map = json.decode(row.toCompanion(true).data.value) as Map<String, dynamic>;
-                  return User.fromMap(userId, map);
+                  return row.version;
                 });
 
-            _versionSub?.cancel();
-            _versionSub = null;
-
-            _versionSub = userStream
-                .map((user) => user?.version)
+            _versionSub = versionStream
                 .distinct((prev, next) {
                   if (prev == next) return true;
                   return false;

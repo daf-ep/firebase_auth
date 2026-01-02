@@ -1,4 +1,4 @@
-// Copyright (C) 2025 Fiber
+// Copyright (C) 2026 Fiber
 //
 // All rights reserved. This script, including its code and logic, is the
 // exclusive property of Fiber. Redistribution, reproduction,
@@ -27,35 +27,42 @@
 // is a violation of applicable intellectual property laws and will result
 // in legal action.
 
-import 'package:firebase_database/firebase_database.dart';
+import 'package:injectable/injectable.dart';
+import 'package:rxdart/subjects.dart';
 
-class DatabaseNodes {
-  static DatabaseReference users(String userId) => _database.ref("users/${_DatabaseEncoder.encode(userId)}");
+import '../../../models/observe.dart';
+import '../../internal/user/user/current_user_service.dart';
 
-  static DatabaseReference emails(String email) => _database.ref("emails/${_DatabaseEncoder.encode(email)}");
-
-  static FirebaseDatabase get _database => FirebaseDatabase.instance;
+abstract class UserDataService {
+  Observe<Map<String, dynamic>?> get custom;
 }
 
-class _DatabaseEncoder {
-  static const Map<String, String> _replacements = {
-    '.': '_dot_',
-    '#': '_hash_',
-    r'$': '_dollar_',
-    '[': '_lb_',
-    ']': '_rb_',
-  };
+@Singleton(as: UserDataService)
+class UserDataServiceImpl implements UserDataService {
+  final CurrentUserService _currentUser;
 
-  static String encode(String input) {
-    var value = input.trim();
+  UserDataServiceImpl(this._currentUser);
 
-    for (final entry in _replacements.entries) {
-      value = value.replaceAll(entry.key, entry.value);
-    }
+  final _dataSubject = BehaviorSubject<Map<String, dynamic>?>.seeded(null);
 
-    if (value.isEmpty) {
-      throw ArgumentError("RTDB key cannot be empty");
-    }
-    return value;
+  @override
+  Observe<Map<String, dynamic>?> get custom =>
+      Observe<Map<String, dynamic>?>(value: _dataSubject.value, stream: _dataSubject.stream);
+
+  @PostConstruct()
+  init() {
+    listenToUserData();
+  }
+}
+
+extension on UserDataServiceImpl {
+  void listenToUserData() {
+    _currentUser.data.stream
+        .map((data) => data?.data)
+        .distinct((prev, next) {
+          if (prev == next) return true;
+          return false;
+        })
+        .listen((data) => _dataSubject.value = data);
   }
 }

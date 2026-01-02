@@ -27,22 +27,4 @@
 // is a violation of applicable intellectual property laws and will result
 // in legal action.
 
-enum RateLimiteFeature { newDeviceDetected, newDeviceOtpRequest, resetPassword }
-
-class RateLimiteState {
-  final int count;
-  final int createdAt;
-
-  const RateLimiteState(this.count, this.createdAt);
-
-  bool isBlocked({required int maxCount, required Duration window, int? now}) {
-    final currentTime = now ?? DateTime.now().millisecondsSinceEpoch;
-    final isInWindow = currentTime - createdAt < window.inMilliseconds;
-
-    return isInWindow && count >= maxCount;
-  }
-
-  RateLimiteState copyWith({int? count, int? createdAt}) {
-    return RateLimiteState(count ?? this.count, createdAt ?? this.createdAt);
-  }
-}
+enum RateLimite { signIn, signUp, newDeviceDetectedVerify, newDeviceOtpRequest, resetPassword }

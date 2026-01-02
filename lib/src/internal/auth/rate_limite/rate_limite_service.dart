@@ -1,4 +1,4 @@
-// Copyright (C) 2025 Fiber
+// Copyright (C) 2026 Fiber
 //
 // All rights reserved. This script, including its code and logic, is the
 // exclusive property of Fiber. Redistribution, reproduction,
@@ -27,35 +27,37 @@
 // is a violation of applicable intellectual property laws and will result
 // in legal action.
 
-import 'package:firebase_database/firebase_database.dart';
+import 'package:flutter/foundation.dart';
+import 'package:injectable/injectable.dart';
 
-class DatabaseNodes {
-  static DatabaseReference users(String userId) => _database.ref("users/${_DatabaseEncoder.encode(userId)}");
+import '../../../../models/auth/rate_limite.dart';
+import 'local_service.dart';
+import 'remote_service.dart';
 
-  static DatabaseReference emails(String email) => _database.ref("emails/${_DatabaseEncoder.encode(email)}");
-
-  static FirebaseDatabase get _database => FirebaseDatabase.instance;
+@internal
+abstract class RateLimiteService {
+  Future<bool> isRateLimited(RateLimite rateLimite, String key);
 }
 
-class _DatabaseEncoder {
-  static const Map<String, String> _replacements = {
-    '.': '_dot_',
-    '#': '_hash_',
-    r'$': '_dollar_',
-    '[': '_lb_',
-    ']': '_rb_',
-  };
+@Singleton(as: RateLimiteService)
+class RateLimiteServiceImpl implements RateLimiteService {
+  final LocalRateLimiteService _local;
+  final RemoteRateLimiteService _remote;
 
-  static String encode(String input) {
-    var value = input.trim();
+  RateLimiteServiceImpl(this._local, this._remote);
 
-    for (final entry in _replacements.entries) {
-      value = value.replaceAll(entry.key, entry.value);
+  @override
+  Future<bool> isRateLimited(RateLimite rateLimite, String key) async {
+    if (await _local.isRateLimited(rateLimite, key)) return true;
+
+    final isRateLimite = await _remote.isRateLimited(rateLimite, key);
+
+    if (isRateLimite.isRateLimited) {
+      final resetAt = isRateLimite.resetAt;
+      if (resetAt != null) {
+        await _local.saveBlocked(rateLimite, key, resetAt);
+      }
     }
-
-    if (value.isEmpty) {
-      throw ArgumentError("RTDB key cannot be empty");
-    }
-    return value;
+    return isRateLimite.isRateLimited;
   }
 }

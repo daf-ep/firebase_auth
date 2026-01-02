@@ -1,4 +1,4 @@
-// Copyright (C) 2025 Fiber
+// Copyright (C) 2026 Fiber
 //
 // All rights reserved. This script, including its code and logic, is the
 // exclusive property of Fiber. Redistribution, reproduction,
@@ -27,35 +27,46 @@
 // is a violation of applicable intellectual property laws and will result
 // in legal action.
 
-import 'package:firebase_database/firebase_database.dart';
+import 'dart:async';
+import 'dart:convert';
 
-class DatabaseNodes {
-  static DatabaseReference users(String userId) => _database.ref("users/${_DatabaseEncoder.encode(userId)}");
+import 'package:drift/drift.dart';
+import 'package:flutter/foundation.dart';
+import 'package:injectable/injectable.dart';
 
-  static DatabaseReference emails(String email) => _database.ref("emails/${_DatabaseEncoder.encode(email)}");
+import '../../../../models/user/user.dart';
+import '../../local/local_storage.dart';
 
-  static FirebaseDatabase get _database => FirebaseDatabase.instance;
+@internal
+abstract class LocalCurrentUserService {
+  Future<void> add(User user);
+  Future<void> delete(String userId);
 }
 
-class _DatabaseEncoder {
-  static const Map<String, String> _replacements = {
-    '.': '_dot_',
-    '#': '_hash_',
-    r'$': '_dollar_',
-    '[': '_lb_',
-    ']': '_rb_',
-  };
+@Singleton(as: LocalCurrentUserService)
+class LocalCurrentUserServiceImpl implements LocalCurrentUserService {
+  @override
+  Future<void> add(User user) => _db.transaction(() async {
+    final existing = await (_db.select(_table)..where((tbl) => tbl.userId.equals(user.userId))).getSingleOrNull();
 
-  static String encode(String input) {
-    var value = input.trim();
+    if (existing != null && existing.version >= user.version) return;
 
-    for (final entry in _replacements.entries) {
-      value = value.replaceAll(entry.key, entry.value);
-    }
+    await _db
+        .into(_table)
+        .insert(
+          UserTableData(
+            userId: user.userId,
+            email: user.email.value,
+            version: user.version,
+            data: json.encode(user.toMap()),
+          ),
+          mode: InsertMode.insertOrReplace,
+        );
+  });
 
-    if (value.isEmpty) {
-      throw ArgumentError("RTDB key cannot be empty");
-    }
-    return value;
-  }
+  @override
+  Future<void> delete(String userId) => (_db.delete(_table)..where((tbl) => tbl.userId.equals(userId))).go();
+
+  LocalStorage get _db => LocalStorage.instance;
+  $UserTableTable get _table => _db.userTable;
 }

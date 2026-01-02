@@ -318,12 +318,10 @@ class $RateLimiteTableTable extends RateLimiteTable
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   $RateLimiteTableTable(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _deviceIdMeta = const VerificationMeta(
-    'deviceId',
-  );
+  static const VerificationMeta _keyMeta = const VerificationMeta('key');
   @override
-  late final GeneratedColumn<String> deviceId = GeneratedColumn<String>(
-    'device_id',
+  late final GeneratedColumn<String> key = GeneratedColumn<String>(
+    'key',
     aliasedName,
     false,
     type: DriftSqlType.string,
@@ -349,19 +347,19 @@ class $RateLimiteTableTable extends RateLimiteTable
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _createdAtMeta = const VerificationMeta(
-    'createdAt',
+  static const VerificationMeta _resetAtMeta = const VerificationMeta(
+    'resetAt',
   );
   @override
-  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
-    'created_at',
+  late final GeneratedColumn<int> resetAt = GeneratedColumn<int>(
+    'reset_at',
     aliasedName,
     false,
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
   @override
-  List<GeneratedColumn> get $columns => [deviceId, feature, count, createdAt];
+  List<GeneratedColumn> get $columns => [key, feature, count, resetAt];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -374,13 +372,13 @@ class $RateLimiteTableTable extends RateLimiteTable
   }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
-    if (data.containsKey('device_id')) {
+    if (data.containsKey('key')) {
       context.handle(
-        _deviceIdMeta,
-        deviceId.isAcceptableOrUnknown(data['device_id']!, _deviceIdMeta),
+        _keyMeta,
+        key.isAcceptableOrUnknown(data['key']!, _keyMeta),
       );
     } else if (isInserting) {
-      context.missing(_deviceIdMeta);
+      context.missing(_keyMeta);
     }
     if (data.containsKey('feature')) {
       context.handle(
@@ -398,26 +396,26 @@ class $RateLimiteTableTable extends RateLimiteTable
     } else if (isInserting) {
       context.missing(_countMeta);
     }
-    if (data.containsKey('created_at')) {
+    if (data.containsKey('reset_at')) {
       context.handle(
-        _createdAtMeta,
-        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+        _resetAtMeta,
+        resetAt.isAcceptableOrUnknown(data['reset_at']!, _resetAtMeta),
       );
     } else if (isInserting) {
-      context.missing(_createdAtMeta);
+      context.missing(_resetAtMeta);
     }
     return context;
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => {deviceId, feature};
+  Set<GeneratedColumn> get $primaryKey => {key, feature};
   @override
   RateLimiteTableData map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return RateLimiteTableData(
-      deviceId: attachedDatabase.typeMapping.read(
+      key: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}device_id'],
+        data['${effectivePrefix}key'],
       )!,
       feature: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
@@ -427,9 +425,9 @@ class $RateLimiteTableTable extends RateLimiteTable
         DriftSqlType.int,
         data['${effectivePrefix}count'],
       )!,
-      createdAt: attachedDatabase.typeMapping.read(
+      resetAt: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
-        data['${effectivePrefix}created_at'],
+        data['${effectivePrefix}reset_at'],
       )!,
     );
   }
@@ -442,32 +440,32 @@ class $RateLimiteTableTable extends RateLimiteTable
 
 class RateLimiteTableData extends DataClass
     implements Insertable<RateLimiteTableData> {
-  final String deviceId;
+  final String key;
   final String feature;
   final int count;
-  final int createdAt;
+  final int resetAt;
   const RateLimiteTableData({
-    required this.deviceId,
+    required this.key,
     required this.feature,
     required this.count,
-    required this.createdAt,
+    required this.resetAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    map['device_id'] = Variable<String>(deviceId);
+    map['key'] = Variable<String>(key);
     map['feature'] = Variable<String>(feature);
     map['count'] = Variable<int>(count);
-    map['created_at'] = Variable<int>(createdAt);
+    map['reset_at'] = Variable<int>(resetAt);
     return map;
   }
 
   RateLimiteTableCompanion toCompanion(bool nullToAbsent) {
     return RateLimiteTableCompanion(
-      deviceId: Value(deviceId),
+      key: Value(key),
       feature: Value(feature),
       count: Value(count),
-      createdAt: Value(createdAt),
+      resetAt: Value(resetAt),
     );
   }
 
@@ -477,117 +475,117 @@ class RateLimiteTableData extends DataClass
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return RateLimiteTableData(
-      deviceId: serializer.fromJson<String>(json['deviceId']),
+      key: serializer.fromJson<String>(json['key']),
       feature: serializer.fromJson<String>(json['feature']),
       count: serializer.fromJson<int>(json['count']),
-      createdAt: serializer.fromJson<int>(json['createdAt']),
+      resetAt: serializer.fromJson<int>(json['resetAt']),
     );
   }
   @override
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
-      'deviceId': serializer.toJson<String>(deviceId),
+      'key': serializer.toJson<String>(key),
       'feature': serializer.toJson<String>(feature),
       'count': serializer.toJson<int>(count),
-      'createdAt': serializer.toJson<int>(createdAt),
+      'resetAt': serializer.toJson<int>(resetAt),
     };
   }
 
   RateLimiteTableData copyWith({
-    String? deviceId,
+    String? key,
     String? feature,
     int? count,
-    int? createdAt,
+    int? resetAt,
   }) => RateLimiteTableData(
-    deviceId: deviceId ?? this.deviceId,
+    key: key ?? this.key,
     feature: feature ?? this.feature,
     count: count ?? this.count,
-    createdAt: createdAt ?? this.createdAt,
+    resetAt: resetAt ?? this.resetAt,
   );
   RateLimiteTableData copyWithCompanion(RateLimiteTableCompanion data) {
     return RateLimiteTableData(
-      deviceId: data.deviceId.present ? data.deviceId.value : this.deviceId,
+      key: data.key.present ? data.key.value : this.key,
       feature: data.feature.present ? data.feature.value : this.feature,
       count: data.count.present ? data.count.value : this.count,
-      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      resetAt: data.resetAt.present ? data.resetAt.value : this.resetAt,
     );
   }
 
   @override
   String toString() {
     return (StringBuffer('RateLimiteTableData(')
-          ..write('deviceId: $deviceId, ')
+          ..write('key: $key, ')
           ..write('feature: $feature, ')
           ..write('count: $count, ')
-          ..write('createdAt: $createdAt')
+          ..write('resetAt: $resetAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(deviceId, feature, count, createdAt);
+  int get hashCode => Object.hash(key, feature, count, resetAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is RateLimiteTableData &&
-          other.deviceId == this.deviceId &&
+          other.key == this.key &&
           other.feature == this.feature &&
           other.count == this.count &&
-          other.createdAt == this.createdAt);
+          other.resetAt == this.resetAt);
 }
 
 class RateLimiteTableCompanion extends UpdateCompanion<RateLimiteTableData> {
-  final Value<String> deviceId;
+  final Value<String> key;
   final Value<String> feature;
   final Value<int> count;
-  final Value<int> createdAt;
+  final Value<int> resetAt;
   final Value<int> rowid;
   const RateLimiteTableCompanion({
-    this.deviceId = const Value.absent(),
+    this.key = const Value.absent(),
     this.feature = const Value.absent(),
     this.count = const Value.absent(),
-    this.createdAt = const Value.absent(),
+    this.resetAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   RateLimiteTableCompanion.insert({
-    required String deviceId,
+    required String key,
     required String feature,
     required int count,
-    required int createdAt,
+    required int resetAt,
     this.rowid = const Value.absent(),
-  }) : deviceId = Value(deviceId),
+  }) : key = Value(key),
        feature = Value(feature),
        count = Value(count),
-       createdAt = Value(createdAt);
+       resetAt = Value(resetAt);
   static Insertable<RateLimiteTableData> custom({
-    Expression<String>? deviceId,
+    Expression<String>? key,
     Expression<String>? feature,
     Expression<int>? count,
-    Expression<int>? createdAt,
+    Expression<int>? resetAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
-      if (deviceId != null) 'device_id': deviceId,
+      if (key != null) 'key': key,
       if (feature != null) 'feature': feature,
       if (count != null) 'count': count,
-      if (createdAt != null) 'created_at': createdAt,
+      if (resetAt != null) 'reset_at': resetAt,
       if (rowid != null) 'rowid': rowid,
     });
   }
 
   RateLimiteTableCompanion copyWith({
-    Value<String>? deviceId,
+    Value<String>? key,
     Value<String>? feature,
     Value<int>? count,
-    Value<int>? createdAt,
+    Value<int>? resetAt,
     Value<int>? rowid,
   }) {
     return RateLimiteTableCompanion(
-      deviceId: deviceId ?? this.deviceId,
+      key: key ?? this.key,
       feature: feature ?? this.feature,
       count: count ?? this.count,
-      createdAt: createdAt ?? this.createdAt,
+      resetAt: resetAt ?? this.resetAt,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -595,8 +593,8 @@ class RateLimiteTableCompanion extends UpdateCompanion<RateLimiteTableData> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    if (deviceId.present) {
-      map['device_id'] = Variable<String>(deviceId.value);
+    if (key.present) {
+      map['key'] = Variable<String>(key.value);
     }
     if (feature.present) {
       map['feature'] = Variable<String>(feature.value);
@@ -604,8 +602,8 @@ class RateLimiteTableCompanion extends UpdateCompanion<RateLimiteTableData> {
     if (count.present) {
       map['count'] = Variable<int>(count.value);
     }
-    if (createdAt.present) {
-      map['created_at'] = Variable<int>(createdAt.value);
+    if (resetAt.present) {
+      map['reset_at'] = Variable<int>(resetAt.value);
     }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
@@ -616,19 +614,19 @@ class RateLimiteTableCompanion extends UpdateCompanion<RateLimiteTableData> {
   @override
   String toString() {
     return (StringBuffer('RateLimiteTableCompanion(')
-          ..write('deviceId: $deviceId, ')
+          ..write('key: $key, ')
           ..write('feature: $feature, ')
           ..write('count: $count, ')
-          ..write('createdAt: $createdAt, ')
+          ..write('resetAt: $resetAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
   }
 }
 
-abstract class _$LocalAuthStorage extends GeneratedDatabase {
-  _$LocalAuthStorage(QueryExecutor e) : super(e);
-  $LocalAuthStorageManager get managers => $LocalAuthStorageManager(this);
+abstract class _$LocalStorage extends GeneratedDatabase {
+  _$LocalStorage(QueryExecutor e) : super(e);
+  $LocalStorageManager get managers => $LocalStorageManager(this);
   late final $UserTableTable userTable = $UserTableTable(this);
   late final $RateLimiteTableTable rateLimiteTable = $RateLimiteTableTable(
     this,
@@ -661,7 +659,7 @@ typedef $$UserTableTableUpdateCompanionBuilder =
     });
 
 class $$UserTableTableFilterComposer
-    extends Composer<_$LocalAuthStorage, $UserTableTable> {
+    extends Composer<_$LocalStorage, $UserTableTable> {
   $$UserTableTableFilterComposer({
     required super.$db,
     required super.$table,
@@ -691,7 +689,7 @@ class $$UserTableTableFilterComposer
 }
 
 class $$UserTableTableOrderingComposer
-    extends Composer<_$LocalAuthStorage, $UserTableTable> {
+    extends Composer<_$LocalStorage, $UserTableTable> {
   $$UserTableTableOrderingComposer({
     required super.$db,
     required super.$table,
@@ -721,7 +719,7 @@ class $$UserTableTableOrderingComposer
 }
 
 class $$UserTableTableAnnotationComposer
-    extends Composer<_$LocalAuthStorage, $UserTableTable> {
+    extends Composer<_$LocalStorage, $UserTableTable> {
   $$UserTableTableAnnotationComposer({
     required super.$db,
     required super.$table,
@@ -745,7 +743,7 @@ class $$UserTableTableAnnotationComposer
 class $$UserTableTableTableManager
     extends
         RootTableManager<
-          _$LocalAuthStorage,
+          _$LocalStorage,
           $UserTableTable,
           UserTableData,
           $$UserTableTableFilterComposer,
@@ -755,12 +753,12 @@ class $$UserTableTableTableManager
           $$UserTableTableUpdateCompanionBuilder,
           (
             UserTableData,
-            BaseReferences<_$LocalAuthStorage, $UserTableTable, UserTableData>,
+            BaseReferences<_$LocalStorage, $UserTableTable, UserTableData>,
           ),
           UserTableData,
           PrefetchHooks Function()
         > {
-  $$UserTableTableTableManager(_$LocalAuthStorage db, $UserTableTable table)
+  $$UserTableTableTableManager(_$LocalStorage db, $UserTableTable table)
     : super(
         TableManagerState(
           db: db,
@@ -809,7 +807,7 @@ class $$UserTableTableTableManager
 
 typedef $$UserTableTableProcessedTableManager =
     ProcessedTableManager<
-      _$LocalAuthStorage,
+      _$LocalStorage,
       $UserTableTable,
       UserTableData,
       $$UserTableTableFilterComposer,
@@ -819,30 +817,30 @@ typedef $$UserTableTableProcessedTableManager =
       $$UserTableTableUpdateCompanionBuilder,
       (
         UserTableData,
-        BaseReferences<_$LocalAuthStorage, $UserTableTable, UserTableData>,
+        BaseReferences<_$LocalStorage, $UserTableTable, UserTableData>,
       ),
       UserTableData,
       PrefetchHooks Function()
     >;
 typedef $$RateLimiteTableTableCreateCompanionBuilder =
     RateLimiteTableCompanion Function({
-      required String deviceId,
+      required String key,
       required String feature,
       required int count,
-      required int createdAt,
+      required int resetAt,
       Value<int> rowid,
     });
 typedef $$RateLimiteTableTableUpdateCompanionBuilder =
     RateLimiteTableCompanion Function({
-      Value<String> deviceId,
+      Value<String> key,
       Value<String> feature,
       Value<int> count,
-      Value<int> createdAt,
+      Value<int> resetAt,
       Value<int> rowid,
     });
 
 class $$RateLimiteTableTableFilterComposer
-    extends Composer<_$LocalAuthStorage, $RateLimiteTableTable> {
+    extends Composer<_$LocalStorage, $RateLimiteTableTable> {
   $$RateLimiteTableTableFilterComposer({
     required super.$db,
     required super.$table,
@@ -850,8 +848,8 @@ class $$RateLimiteTableTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnFilters<String> get deviceId => $composableBuilder(
-    column: $table.deviceId,
+  ColumnFilters<String> get key => $composableBuilder(
+    column: $table.key,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -865,14 +863,14 @@ class $$RateLimiteTableTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<int> get createdAt => $composableBuilder(
-    column: $table.createdAt,
+  ColumnFilters<int> get resetAt => $composableBuilder(
+    column: $table.resetAt,
     builder: (column) => ColumnFilters(column),
   );
 }
 
 class $$RateLimiteTableTableOrderingComposer
-    extends Composer<_$LocalAuthStorage, $RateLimiteTableTable> {
+    extends Composer<_$LocalStorage, $RateLimiteTableTable> {
   $$RateLimiteTableTableOrderingComposer({
     required super.$db,
     required super.$table,
@@ -880,8 +878,8 @@ class $$RateLimiteTableTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnOrderings<String> get deviceId => $composableBuilder(
-    column: $table.deviceId,
+  ColumnOrderings<String> get key => $composableBuilder(
+    column: $table.key,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -895,14 +893,14 @@ class $$RateLimiteTableTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<int> get createdAt => $composableBuilder(
-    column: $table.createdAt,
+  ColumnOrderings<int> get resetAt => $composableBuilder(
+    column: $table.resetAt,
     builder: (column) => ColumnOrderings(column),
   );
 }
 
 class $$RateLimiteTableTableAnnotationComposer
-    extends Composer<_$LocalAuthStorage, $RateLimiteTableTable> {
+    extends Composer<_$LocalStorage, $RateLimiteTableTable> {
   $$RateLimiteTableTableAnnotationComposer({
     required super.$db,
     required super.$table,
@@ -910,8 +908,8 @@ class $$RateLimiteTableTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  GeneratedColumn<String> get deviceId =>
-      $composableBuilder(column: $table.deviceId, builder: (column) => column);
+  GeneratedColumn<String> get key =>
+      $composableBuilder(column: $table.key, builder: (column) => column);
 
   GeneratedColumn<String> get feature =>
       $composableBuilder(column: $table.feature, builder: (column) => column);
@@ -919,14 +917,14 @@ class $$RateLimiteTableTableAnnotationComposer
   GeneratedColumn<int> get count =>
       $composableBuilder(column: $table.count, builder: (column) => column);
 
-  GeneratedColumn<int> get createdAt =>
-      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+  GeneratedColumn<int> get resetAt =>
+      $composableBuilder(column: $table.resetAt, builder: (column) => column);
 }
 
 class $$RateLimiteTableTableTableManager
     extends
         RootTableManager<
-          _$LocalAuthStorage,
+          _$LocalStorage,
           $RateLimiteTableTable,
           RateLimiteTableData,
           $$RateLimiteTableTableFilterComposer,
@@ -937,7 +935,7 @@ class $$RateLimiteTableTableTableManager
           (
             RateLimiteTableData,
             BaseReferences<
-              _$LocalAuthStorage,
+              _$LocalStorage,
               $RateLimiteTableTable,
               RateLimiteTableData
             >,
@@ -946,7 +944,7 @@ class $$RateLimiteTableTableTableManager
           PrefetchHooks Function()
         > {
   $$RateLimiteTableTableTableManager(
-    _$LocalAuthStorage db,
+    _$LocalStorage db,
     $RateLimiteTableTable table,
   ) : super(
         TableManagerState(
@@ -960,30 +958,30 @@ class $$RateLimiteTableTableTableManager
               $$RateLimiteTableTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
-                Value<String> deviceId = const Value.absent(),
+                Value<String> key = const Value.absent(),
                 Value<String> feature = const Value.absent(),
                 Value<int> count = const Value.absent(),
-                Value<int> createdAt = const Value.absent(),
+                Value<int> resetAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => RateLimiteTableCompanion(
-                deviceId: deviceId,
+                key: key,
                 feature: feature,
                 count: count,
-                createdAt: createdAt,
+                resetAt: resetAt,
                 rowid: rowid,
               ),
           createCompanionCallback:
               ({
-                required String deviceId,
+                required String key,
                 required String feature,
                 required int count,
-                required int createdAt,
+                required int resetAt,
                 Value<int> rowid = const Value.absent(),
               }) => RateLimiteTableCompanion.insert(
-                deviceId: deviceId,
+                key: key,
                 feature: feature,
                 count: count,
-                createdAt: createdAt,
+                resetAt: resetAt,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -996,7 +994,7 @@ class $$RateLimiteTableTableTableManager
 
 typedef $$RateLimiteTableTableProcessedTableManager =
     ProcessedTableManager<
-      _$LocalAuthStorage,
+      _$LocalStorage,
       $RateLimiteTableTable,
       RateLimiteTableData,
       $$RateLimiteTableTableFilterComposer,
@@ -1007,7 +1005,7 @@ typedef $$RateLimiteTableTableProcessedTableManager =
       (
         RateLimiteTableData,
         BaseReferences<
-          _$LocalAuthStorage,
+          _$LocalStorage,
           $RateLimiteTableTable,
           RateLimiteTableData
         >,
@@ -1016,9 +1014,9 @@ typedef $$RateLimiteTableTableProcessedTableManager =
       PrefetchHooks Function()
     >;
 
-class $LocalAuthStorageManager {
-  final _$LocalAuthStorage _db;
-  $LocalAuthStorageManager(this._db);
+class $LocalStorageManager {
+  final _$LocalStorage _db;
+  $LocalStorageManager(this._db);
   $$UserTableTableTableManager get userTable =>
       $$UserTableTableTableManager(_db, _db.userTable);
   $$RateLimiteTableTableTableManager get rateLimiteTable =>
