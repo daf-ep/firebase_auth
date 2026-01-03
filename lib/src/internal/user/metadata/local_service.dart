@@ -32,7 +32,7 @@ import 'dart:convert';
 import 'package:drift/drift.dart';
 import 'package:injectable/injectable.dart';
 
-import '../../auth/auth.dart';
+import '../../auth/user_service.dart';
 import '../../local/local_storage.dart';
 import '../user.dart';
 
@@ -42,9 +42,13 @@ abstract class LocalUserMetadataService {
 
 @Singleton(as: LocalUserMetadataService)
 class LocalUserMetadataServiceImpl implements LocalUserMetadataService {
+  final AuthUserService _authUser;
+
+  LocalUserMetadataServiceImpl(this._authUser);
+
   @override
   Future<void> update({int? lastSignInTime}) async {
-    final userId = AuthServices.user.userId.value;
+    final userId = _authUser.userId.value;
     if (userId == null) return;
 
     final user = UserServices.current.data.value;

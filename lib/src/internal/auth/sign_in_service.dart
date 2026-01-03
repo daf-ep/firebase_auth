@@ -32,6 +32,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:injectable/injectable.dart';
 
+import '../../../models/auth/otp.dart';
 import '../../../results/auth.dart';
 import '../device/device_info_service.dart';
 
@@ -39,7 +40,7 @@ import '../device/device_info_service.dart';
 abstract class AuthSignInService {
   Future<SignInWithEmailAndPasswordResult> signInWithEmailAndPassword(String email, String password);
 
-  Future<void> askOtp(String email);
+  Future<AskOtpResponse> askOtp(String email);
 
   Future<bool> verify(String email, String otp);
 }
@@ -81,9 +82,17 @@ class AuthSignInServiceImpl implements AuthSignInService {
   }
 
   @override
-  Future<void> askOtp(String email) async {
-    final callable = _instance.httpsCallable("askNewDeviceDectectedOtp");
-    await callable.call({'email': email, 'deviceId': _deviceInfo.identifier});
+  Future<AskOtpResponse> askOtp(String email) async {
+    final callable = _instance.httpsCallable('askNewDeviceDectectedOtp');
+
+    final result = await callable.call({'email': email, 'deviceId': _deviceInfo.identifier});
+
+    final data = result.data as Map<String, dynamic>;
+
+    final bool isLimited = data['isLimited'] as bool;
+    final bool success = data['success'] as bool;
+
+    return AskOtpResponse(isLimited: isLimited, success: success);
   }
 
   @override

@@ -32,7 +32,7 @@ import 'package:injectable/injectable.dart';
 
 import '../../../../helpers/database.dart';
 import '../../../../models/user/user.dart';
-import '../../auth/auth.dart';
+import '../../auth/user_service.dart';
 
 @internal
 abstract class RemoteCurrentUserService {
@@ -43,12 +43,16 @@ abstract class RemoteCurrentUserService {
 
 @Singleton(as: RemoteCurrentUserService)
 class RemoteCurrentUserServiceImpl implements RemoteCurrentUserService {
+  final AuthUserService _authUser;
+
+  RemoteCurrentUserServiceImpl(this._authUser);
+
   @override
   Future<void> add(User user) => DatabaseNodes.users(user.userId).set(user.toMap());
 
   @override
   Future<void> delete(String userId) async {
-    final userId = AuthServices.user.userId.value;
+    final userId = _authUser.userId.value;
     if (userId == null) return;
 
     await DatabaseNodes.users(userId).remove();
@@ -56,7 +60,7 @@ class RemoteCurrentUserServiceImpl implements RemoteCurrentUserService {
 
   @override
   Future<User?> getUser(String userId) async {
-    final userId = AuthServices.user.userId.value;
+    final userId = _authUser.userId.value;
     if (userId == null) return null;
 
     final snapshot = await DatabaseNodes.users(userId).get();

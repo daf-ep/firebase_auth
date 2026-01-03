@@ -1,4 +1,4 @@
-// Copyright (C) 2025 Fiber
+// Copyright (C) 2026 Fiber
 //
 // All rights reserved. This script, including its code and logic, is the
 // exclusive property of Fiber. Redistribution, reproduction,
@@ -27,35 +27,20 @@
 // is a violation of applicable intellectual property laws and will result
 // in legal action.
 
-import 'package:fiber_firebase_auth/fiber_firebase_auth.dart';
-import 'package:flutter/material.dart';
+import 'package:injectable/injectable.dart';
 
-import 'src/features/home/views/home_view.dart';
-import 'src/features/sign_in/views/sign_in_view.dart';
+import '../../../helpers/database.dart';
+import '../../../models/user/user.dart';
 
-Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await FiberAuth.initialize();
-
-  runApp(const _Main());
+abstract class UsersSessionsService {
+  Future<bool> isExists(String userId, String deviceId);
 }
 
-class _Main extends StatelessWidget {
-  const _Main();
-
+@Singleton(as: UsersSessionsService)
+class UsersSessionsServiceImpl implements UsersSessionsService {
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: StreamBuilder<bool>(
-        initialData: FiberAuth.user.current.isUserConnected.value,
-        stream: FiberAuth.user.current.isUserConnected.stream.distinct(),
-        builder: (_, snapshot) {
-          final isUserConnected = snapshot.data as bool;
-
-          return isUserConnected ? const HomeView() : const SignInView();
-        },
-      ),
-    );
+  Future<bool> isExists(String userId, String deviceId) async {
+    final snapshot = await DatabaseNodes.users(userId).child(UserConstants.sessions).child(deviceId).get();
+    return snapshot.exists;
   }
 }

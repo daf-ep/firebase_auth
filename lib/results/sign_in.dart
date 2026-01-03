@@ -192,6 +192,10 @@ enum SignInOtpResult {
   /// The backend may temporarily lock the user from retrying.
   tooManyRequests,
 
+  invalidCredentials,
+
+  userDisabled,
+
   /// An unexpected or unhandled error occurred.
   ///
   /// Used as a fallback for unknown failures during verification.

@@ -29,10 +29,10 @@
 
 import 'package:equatable/equatable.dart';
 
-import 'session.dart';
 import 'email.dart';
 import 'metadata.dart';
 import 'preferred_language.dart';
+import 'session.dart';
 
 class UserConstants {
   static const String version = "version";
@@ -66,7 +66,7 @@ class User extends Equatable {
     return User(
       userId: userId,
       version: map[UserConstants.version],
-      email: map[UserConstants.email],
+      email: Email.fromMap(map[UserConstants.email]),
       metadata: UserMetadata.fromMap(map[UserConstants.metadata]),
       sessions: ((map[UserConstants.sessions] ?? {}) as Map<dynamic, dynamic>).entries
           .map((e) => Session.fromMap(e.key, e.value))

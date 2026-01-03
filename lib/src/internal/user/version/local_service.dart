@@ -38,6 +38,7 @@ import 'package:rxdart/subjects.dart';
 import '../../../../models/observe.dart';
 import '../../../../models/user/user.dart';
 import '../../auth/auth.dart';
+import '../../auth/user_service.dart';
 import '../../local/local_storage.dart';
 
 @internal
@@ -49,6 +50,10 @@ abstract class LocalVersionService {
 
 @Singleton(as: LocalVersionService)
 class LocalVersionServiceImpl implements LocalVersionService {
+  final AuthUserService _authUser;
+
+  LocalVersionServiceImpl(this._authUser);
+
   final _versionSubject = BehaviorSubject<int?>.seeded(null);
 
   @override
@@ -87,7 +92,7 @@ class LocalVersionServiceImpl implements LocalVersionService {
 
 extension on LocalVersionServiceImpl {
   void listenToCurrentLocalVersion() {
-    AuthServices.user.userId.stream
+    _authUser.userId.stream
         .distinct((prev, next) {
           if (prev == next) return true;
           return false;

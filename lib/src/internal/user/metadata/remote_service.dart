@@ -32,7 +32,7 @@ import 'package:injectable/injectable.dart';
 import '../../../../helpers/database.dart';
 import '../../../../models/user/metadata.dart';
 import '../../../../models/user/user.dart';
-import '../../auth/auth.dart';
+import '../../auth/user_service.dart';
 
 abstract class RemoteUserMetadataService {
   Future<void> update({int? lastSignInTime});
@@ -40,9 +40,13 @@ abstract class RemoteUserMetadataService {
 
 @Singleton(as: RemoteUserMetadataService)
 class RemoteUserMetadataServiceImpl implements RemoteUserMetadataService {
+  final AuthUserService _authUser;
+
+  RemoteUserMetadataServiceImpl(this._authUser);
+
   @override
   Future<void> update({int? lastSignInTime}) async {
-    final userId = AuthServices.user.userId.value;
+    final userId = _authUser.userId.value;
     if (userId == null) return;
 
     final target = DatabaseNodes.users(userId).child(UserConstants.metadata);

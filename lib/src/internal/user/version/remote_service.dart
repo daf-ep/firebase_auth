@@ -38,6 +38,7 @@ import '../../../../helpers/database.dart';
 import '../../../../models/observe.dart';
 import '../../../../models/user/user.dart';
 import '../../auth/auth.dart';
+import '../../auth/user_service.dart';
 
 @internal
 abstract class RemoteVersionService {
@@ -48,6 +49,10 @@ abstract class RemoteVersionService {
 
 @Singleton(as: RemoteVersionService)
 class RemoteVersionServiceImpl implements RemoteVersionService {
+  final AuthUserService _authUser;
+
+  RemoteVersionServiceImpl(this._authUser);
+
   final _versionSubject = BehaviorSubject<int?>.seeded(null);
 
   @override
@@ -71,7 +76,7 @@ class RemoteVersionServiceImpl implements RemoteVersionService {
 
 extension on RemoteVersionServiceImpl {
   void listenToRemoteVersion() {
-    AuthServices.user.userId.stream
+    _authUser.userId.stream
         .distinct((prev, next) {
           if (prev == next) return true;
           return false;

@@ -36,6 +36,7 @@ class RateLimiteTable extends Table {
   TextColumn get feature => text()();
   IntColumn get count => integer()();
   IntColumn get resetAt => integer()();
+  IntColumn get lockUntil => integer().nullable()();
 
   @override
   Set<Column> get primaryKey => {key, feature};

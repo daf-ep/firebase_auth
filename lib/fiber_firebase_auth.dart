@@ -30,12 +30,13 @@
 library;
 
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:get_it/get_it.dart';
 
 import 'di/di.dart';
-import 'src/api/forgot_password.dart';
-import 'src/api/sign_in_service.dart';
-import 'src/api/sign_up_service.dart';
+import 'src/api/auth/forgot_password.dart';
+import 'src/api/auth/sign_in_service.dart';
+import 'src/api/auth/sign_up_service.dart';
 import 'src/api/user/user.dart';
 import 'src/internal/local/local_storage.dart';
 
@@ -55,6 +56,7 @@ class FiberAuth {
     if (Firebase.apps.isEmpty) {
       await Firebase.initializeApp();
     }
+    FirebaseDatabase.instance.setPersistenceEnabled(true);
     await configureAuthDependencies();
     await LocalStorage.initialize();
   }

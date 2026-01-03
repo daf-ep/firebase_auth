@@ -37,8 +37,9 @@ import 'package:rxdart/subjects.dart';
 
 import '../../../../models/observe.dart';
 import '../../../../models/user/user.dart';
-import '../../auth/auth.dart';
+import '../../auth/user_service.dart';
 import '../../local/local_storage.dart';
+import '../sessions/sessions_service.dart';
 import '../version/version_service.dart';
 import 'local_current_user_service.dart';
 import 'remote_current_user_service.dart';
@@ -55,8 +56,10 @@ class CurrentUserServiceImpl implements CurrentUserService {
   final LocalCurrentUserService _local;
   final RemoteCurrentUserService _remote;
   final VersionService _version;
+  final AuthUserService _authUser;
+  final SessionsService _sessions;
 
-  CurrentUserServiceImpl(this._local, this._remote, this._version);
+  CurrentUserServiceImpl(this._local, this._remote, this._version, this._authUser, this._sessions);
 
   final _userSubject = BehaviorSubject<User?>.seeded(null);
 
@@ -71,7 +74,7 @@ class CurrentUserServiceImpl implements CurrentUserService {
 
   @override
   Future<void> delete(String userId) async {
-    final userId = AuthServices.user.userId.value;
+    final userId = _authUser.userId.value;
     if (userId == null) return;
 
     _localUserSub?.cancel();
@@ -86,6 +89,7 @@ class CurrentUserServiceImpl implements CurrentUserService {
   init() async {
     listenToUser();
     listenToVersions();
+    listenToConnected();
   }
 
   LocalStorage get _db => LocalStorage.instance;
@@ -98,7 +102,7 @@ class CurrentUserServiceImpl implements CurrentUserService {
 
 extension on CurrentUserServiceImpl {
   void listenToUser() {
-    AuthServices.user.userId.stream
+    _authUser.userId.stream
         .distinct((prev, next) {
           if (prev == next) return true;
           return false;
@@ -110,6 +114,36 @@ extension on CurrentUserServiceImpl {
             _handleSignIn(userId);
           }
         });
+  }
+
+  void listenToConnected() {
+    CombineLatestStream.combine2(data.stream, _sessions.onlineDeviceIds.stream, (data, onlineDeviceIds) {
+      if (data == null) return null;
+
+      return onlineDeviceIds;
+    }).listen((onlineDeviceIds) {
+      if (onlineDeviceIds == null) return;
+
+      final current = data.value;
+      if (current == null) return;
+
+      bool changed = false;
+
+      final updatedSessions = current.sessions.map((session) {
+        final isOnline = onlineDeviceIds.contains(session.deviceId);
+
+        if (session.metadata.isSignedIn == isOnline) {
+          return session;
+        }
+
+        changed = true;
+        return session.copyWith(metadata: session.metadata.copyWith(isSignedIn: isOnline));
+      }).toList();
+
+      if (!changed) return;
+
+      _userSubject.value = current.copyWith(sessions: updatedSessions);
+    });
   }
 
   Future<void> _handleSignIn(String userId) async {
@@ -178,13 +212,13 @@ extension on CurrentUserServiceImpl {
     _isSyncing = true;
 
     try {
-      final userId = AuthServices.user.userId.value;
+      final userId = _authUser.userId.value;
       if (userId == null) return;
 
       final data = await _remote.getUser(userId);
       if (data == null) return;
 
-      await add(data);
+      await _local.add(data);
     } finally {
       _isSyncing = false;
     }

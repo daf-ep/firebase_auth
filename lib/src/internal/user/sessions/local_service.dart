@@ -36,7 +36,7 @@ import 'package:injectable/injectable.dart';
 
 import '../../../../models/user/language.dart';
 import '../../../../models/user/session.dart';
-import '../../auth/auth.dart';
+import '../../auth/user_service.dart';
 import '../../device/device_info_service.dart';
 import '../../local/local_storage.dart';
 import '../user.dart';
@@ -45,18 +45,19 @@ import '../user.dart';
 abstract class LocalSessionsService {
   Future<void> add(Session session);
   Future<void> delete(String deviceId);
-  Future<void> update({int? lastSignInTime, bool? isSignedIn, ThemeMode? themeMode, Language? language});
+  Future<void> update({int? lastSignInTime, ThemeMode? themeMode, Language? language});
 }
 
 @Singleton(as: LocalSessionsService)
 class LocalSessionsServiceImpl implements LocalSessionsService {
   final DeviceInfoService _deviceInfo;
+  final AuthUserService _authUser;
 
-  LocalSessionsServiceImpl(this._deviceInfo);
+  LocalSessionsServiceImpl(this._deviceInfo, this._authUser);
 
   @override
   Future<void> add(Session session) async {
-    final userId = AuthServices.user.userId.value;
+    final userId = _authUser.userId.value;
     if (userId == null) return;
 
     final currentUser = UserServices.current.data.value;
@@ -90,7 +91,7 @@ class LocalSessionsServiceImpl implements LocalSessionsService {
 
   @override
   Future<void> delete(String deviceId) async {
-    final userId = AuthServices.user.userId.value;
+    final userId = _authUser.userId.value;
     if (userId == null) return;
 
     final currentUser = UserServices.current.data.value;
@@ -111,8 +112,8 @@ class LocalSessionsServiceImpl implements LocalSessionsService {
   }
 
   @override
-  Future<void> update({int? lastSignInTime, bool? isSignedIn, ThemeMode? themeMode, Language? language}) async {
-    final userId = AuthServices.user.userId.value;
+  Future<void> update({int? lastSignInTime, ThemeMode? themeMode, Language? language}) async {
+    final userId = _authUser.userId.value;
     if (userId == null) return;
 
     final user = UserServices.current.data.value;
@@ -129,7 +130,6 @@ class LocalSessionsServiceImpl implements LocalSessionsService {
         metadata: device.metadata.copyWith(
           updatedAt: DateTime.now().millisecondsSinceEpoch,
           lastSignInTime: lastSignInTime ?? device.metadata.lastSignInTime,
-          isSignedIn: isSignedIn ?? device.metadata.isSignedIn,
         ),
         preferences: device.preferences.copyWith(
           themeMode: themeMode ?? device.preferences.themeMode,

@@ -1,9 +1,9 @@
 import * as admin from 'firebase-admin';
 import { onValueCreated, onValueDeleted } from "firebase-functions/v2/database";
-import { DatabaseEncoder } from '../common/database';
-import { APP_NAME, HOSTING_URL_DOMAIN } from '../config/params';
-import { mailBox } from '../mailbox/mail_box';
-import { newUserTemplate } from '../mailbox/templates/new_user';
+import { DatabaseEncoder } from '../../common/database';
+import { APP_NAME, HOSTING_URL_DOMAIN } from '../../config/params';
+import { mailBox } from '../../mailbox/mail_box';
+import { newUserTemplate } from '../../mailbox/templates/new_user';
 
 type LanguageKey = keyof typeof newUserTemplate;
 
@@ -20,7 +20,7 @@ export const onUserCreated = onValueCreated(
     const data = event.data?.val();
     if (!data) return;
 
-    const email = data.email;
+    const email = data.email.value;
     if (!email) return;
 
     await admin.database().ref(`/emails/${DatabaseEncoder.encode(email)}`).set(userId);
@@ -49,8 +49,12 @@ export const onUserDeleted = onValueDeleted(
     const data = event.data?.val();
     if (!data) return;
 
-    const email = data.email;
+    const email = data.email.value;
     if (!email) return;
+
+    try {
+      await admin.auth().deleteUser(userId);
+    } catch (err: any) { }
 
     await admin
       .database()

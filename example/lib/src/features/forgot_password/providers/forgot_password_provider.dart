@@ -27,16 +27,59 @@
 // is a violation of applicable intellectual property laws and will result
 // in legal action.
 
+import 'package:example/src/common/widgets/top_snack_bar.dart';
 import 'package:fiber_firebase_auth/fiber_firebase_auth.dart';
+import 'package:flutter/material.dart';
 
 import '../../../common/provider/state_provider.dart';
 
 class ForgotPasswordState {
+  TextEditingController emailController = TextEditingController();
+
   ForgotPasswordState();
 }
 
 class ForgotPasswordProvider extends StateProvider<ForgotPasswordState> {
   final _forgotPassword = FiberAuth.forgotPassword;
 
-  ForgotPasswordProvider() : super(ForgotPasswordState());
+  ForgotPasswordProvider() : super(ForgotPasswordState()) {
+    state.emailController.addListener(_reload);
+  }
+
+  @override
+  void dispose() {
+    state.emailController.removeListener(_reload);
+    super.dispose();
+  }
+
+  Future<void> validate(BuildContext context) async {
+    final email = state.emailController.text.trim();
+    if (email.isEmpty) return;
+
+    final result = await _forgotPassword.reset(email);
+    if (!context.mounted) return;
+
+    if (result.isError) {
+      context.error(result.message);
+    } else {
+      context.success(result.message);
+    }
+  }
+
+  void _reload() => notifyListeners();
+}
+
+extension ForgotPasswordStateExtension on ForgotPasswordState {
+  bool get isValidateButtonEnabled => emailController.text.trim().isNotEmpty;
+}
+
+extension on ForgotPasswordResult {
+  String get message => switch (this) {
+    ForgotPasswordResult.emptyEmail => 'Please enter your email address to continue.',
+    ForgotPasswordResult.invalidEmailFormat => 'This email address does not appear to be valid.',
+    ForgotPasswordResult.noInternet => 'Unable to connect to the internet. Please check your connection and try again.',
+    ForgotPasswordResult.userNotFound => 'No account is associated with this email address.',
+    ForgotPasswordResult.tooManyRequests => 'You have made too many requests. Please try again later.',
+    ForgotPasswordResult.success => 'A password reset message has been sent. Please check your inbox.',
+  };
 }

@@ -34,6 +34,7 @@ import 'package:flutter/material.dart';
 import '../../../common/provider/state_provider.dart';
 import '../../forgot_password/views/forgot_password_view.dart';
 import '../../sign_up/views/sign_up_view.dart';
+import '../views/otp_view.dart';
 
 class SignInState {
   TextEditingController emailController = TextEditingController();
@@ -72,6 +73,10 @@ class SignInProvider extends StateProvider<SignInState> {
       context.error(result.message);
     } else if (result.isWaitingAction) {
       context.info(result.message);
+      state.emailController.clear();
+      state.passwordController.clear();
+
+      Navigator.push(context, MaterialPageRoute(builder: (_) => OtpView()));
     } else {
       state.emailController.clear();
       state.passwordController.clear();

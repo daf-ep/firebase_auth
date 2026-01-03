@@ -27,7 +27,6 @@
 // is a violation of applicable intellectual property laws and will result
 // in legal action.
 
-import 'package:example/src/common/extensions/user.dart';
 import 'package:fiber_firebase_auth/fiber_firebase_auth.dart';
 
 import '../../../common/provider/state_provider.dart';
@@ -42,15 +41,29 @@ class HomeState {
 class HomeProvider extends StateProvider<HomeState> {
   final _user = FiberAuth.user;
 
-  HomeProvider() : super(HomeState(profil: FiberAuth.user.data?.profil)) {
-    _user.dataStream
+  HomeProvider()
+    : super(
+        HomeState(
+          profil: FiberAuth.user.data.custom.value == null
+              ? null
+              : UserProfil.fromJson(FiberAuth.user.data.custom.value!),
+        ),
+      ) {
+    _user.data.custom.stream
         .distinct()
-        .listen((user) {
-          state.profil = user?.profil;
+        .listen((custom) {
+          if (custom == null) return;
+          state.profil = UserProfil.fromJson(custom);
           notifyListeners();
         })
         .store(this);
+
+    _user.sessions.all.sessions.stream.listen((sessions) {
+      sessions?.forEach((session) {
+        print("==========+> session: ${session.metadata.isSignedIn}");
+      });
+    });
   }
 
-  void signOut() => _user.signOut();
+  void signOut() => _user.current.signOut();
 }

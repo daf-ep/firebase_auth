@@ -30,6 +30,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../common/widgets/button.dart';
+import '../../../common/widgets/input.dart';
+import '../../../common/widgets/scaffold.dart';
+import '../../../common/widgets/spacing.dart';
+import '../../../common/widgets/text.dart';
 import '../providers/forgot_password_provider.dart';
 
 class ForgotPasswordView extends StatelessWidget {
@@ -43,7 +48,19 @@ class ForgotPasswordView extends StatelessWidget {
         builder: (_, provider, __) {
           final state = provider.state;
 
-          return SizedBox();
+          return AppScaffold(
+            children: [
+              AppText.title("Forgot password"),
+              AppSpacing.size24(),
+              AppInput(controller: state.emailController, placeholder: "E-mail"),
+              AppSpacing.size12(),
+              AppButton(
+                isEnabled: state.isValidateButtonEnabled,
+                onPressed: () => provider.validate(context),
+                label: "Validate",
+              ),
+            ],
+          );
         },
       ),
     );

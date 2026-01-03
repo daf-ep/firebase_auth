@@ -27,6 +27,7 @@
 // is a violation of applicable intellectual property laws and will result
 // in legal action.
 
+import 'package:flutter/foundation.dart';
 import 'package:injectable/injectable.dart';
 import 'package:rxdart/subjects.dart';
 
@@ -60,7 +61,12 @@ extension on AllSessionsServiceImpl {
   void listenToSessions() {
     _currentUser.data.stream
         .distinct((prev, next) {
-          if (prev?.metadata.updatedAt == next?.metadata.updatedAt) return true;
+          if (listEquals(
+            prev?.sessions.map((session) => session.toMap()).toList() ?? [],
+            next?.sessions.map((session) => session.toMap()).toList() ?? [],
+          )) {
+            return true;
+          }
           return false;
         })
         .listen((user) => _sessionsSubject.value = user?.sessions);

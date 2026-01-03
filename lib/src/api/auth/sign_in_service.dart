@@ -27,52 +27,66 @@
 // is a violation of applicable intellectual property laws and will result
 // in legal action.
 
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:injectable/injectable.dart';
+import 'package:rxdart/subjects.dart';
 import 'package:string_validator/string_validator.dart';
 
-import '../../extensions/local.dart';
-import '../../models/auth/rate_limite.dart';
-import '../../models/user/session.dart';
-import '../../results/auth.dart';
-import '../../results/sign_in.dart';
-import '../internal/auth/rate_limite/rate_limite_service.dart';
-import '../internal/auth/sign_in_service.dart';
-import '../internal/auth/user_service.dart';
-import '../internal/device/device_info_service.dart';
-import '../internal/device/network_service.dart';
-import '../internal/user/metadata/metadata_service.dart';
-import '../internal/user/sessions/sessions_service.dart';
+import '../../../extensions/local.dart';
+import '../../../models/auth/rate_limite.dart';
+import '../../../models/observe.dart';
+import '../../../models/user/session.dart';
+import '../../../results/auth.dart';
+import '../../../results/sign_in.dart';
+import '../../internal/auth/rate_limite/rate_limite_service.dart';
+import '../../internal/auth/sign_in_service.dart';
+import '../../internal/device/device_info_service.dart';
+import '../../internal/device/network_service.dart';
+import '../../internal/user/metadata/metadata_service.dart';
+import '../../internal/user/sessions/sessions_service.dart';
+import '../../internal/users/sessions_service.dart';
+import '../../internal/users/users_service.dart';
 
 abstract class SignInService {
   Future<SignInResult> signInWithEmailAndPassword(String email, String password);
   Future<SignInOtpResult> verifyOtp(String otp);
   Future<SignInNewOtpResult> askNewOtp();
+  Observe<Duration> get resendOtpDelay;
 }
 
 @Singleton(as: SignInService)
 class SignInServiceImpl implements SignInService {
   final DeviceInfoService _deviceInfo;
   final NetworkService _network;
-  final AuthUserService _authUser;
   final RateLimiteService _rateLimite;
   final SessionsService _userSessions;
   final AuthSignInService _authSignIn;
   final UserMetadataService _userMetadata;
+  final UsersSessionsService _usersSessions;
+  final UsersService _users;
 
   SignInServiceImpl(
     this._deviceInfo,
     this._network,
-    this._authUser,
     this._rateLimite,
     this._userSessions,
     this._authSignIn,
     this._userMetadata,
+    this._usersSessions,
+    this._users,
   );
 
   String? _newDeviceDetectedEmail;
   String? _newDeviceDetectedPassword;
+
+  final _durationSubject = BehaviorSubject<Duration>.seeded(Duration(minutes: 1, seconds: 30));
+
+  @override
+  Observe<Duration> get resendOtpDelay =>
+      Observe<Duration>(value: _durationSubject.value, stream: _durationSubject.stream);
 
   @override
   Future<SignInResult> signInWithEmailAndPassword(String email, String password) async {
@@ -85,18 +99,21 @@ class SignInServiceImpl implements SignInService {
     if (!_network.isReachable) return SignInResult.noInternet;
 
     final deviceId = _deviceInfo.identifier;
-    final userId = await _authUser.getUserId(email);
+    final userId = await _users.getUserId(email);
     if (userId == null) return SignInResult.invalidCredentials;
 
     if (await _rateLimite.isRateLimited(RateLimite.signIn, deviceId)) return SignInResult.tooManyRequests;
 
-    final isDeviceExists = await _userSessions.isExists(deviceId);
+    final isDeviceExists = await _usersSessions.isExists(userId, deviceId);
     if (!isDeviceExists) {
       _newDeviceDetectedEmail = email;
       _newDeviceDetectedPassword = password;
 
-      await _rateLimite.isRateLimited(RateLimite.newDeviceOtpRequest, email);
-      await _authSignIn.askOtp(email);
+      final askOtpResponse = await _authSignIn.askOtp(email);
+      if (askOtpResponse.isLimited) return SignInResult.tooManyRequests;
+
+      _updateOtpRetryAfter();
+
       return SignInResult.newDeviceDetected;
     }
 
@@ -128,7 +145,7 @@ class SignInServiceImpl implements SignInService {
 
     final deviceId = _deviceInfo.identifier;
 
-    if (await _rateLimite.isRateLimited(RateLimite.newDeviceOtpRequest, deviceId)) {
+    if (await _rateLimite.isRateLimited(RateLimite.newDeviceDetectedVerify, deviceId)) {
       return SignInOtpResult.tooManyRequests;
     }
 
@@ -137,10 +154,10 @@ class SignInServiceImpl implements SignInService {
     final signInWithEmailAndPasswordResult = await _authSignIn.signInWithEmailAndPassword(email, password);
     if (signInWithEmailAndPasswordResult.isError) {
       return switch (signInWithEmailAndPasswordResult) {
-        SignInWithEmailAndPasswordResult.invalidCredentials ||
-        SignInWithEmailAndPasswordResult.invalidEmailFormat ||
-        SignInWithEmailAndPasswordResult.userDisabled ||
-        SignInWithEmailAndPasswordResult.unknown => SignInOtpResult.unknown,
+        SignInWithEmailAndPasswordResult.invalidCredentials => SignInOtpResult.invalidCredentials,
+        SignInWithEmailAndPasswordResult.userDisabled => SignInOtpResult.userDisabled,
+        SignInWithEmailAndPasswordResult.unknown ||
+        SignInWithEmailAndPasswordResult.invalidEmailFormat => SignInOtpResult.unknown,
         SignInWithEmailAndPasswordResult.noInternet => SignInOtpResult.noInternet,
         SignInWithEmailAndPasswordResult.tooManyRequests => SignInOtpResult.tooManyRequests,
         SignInWithEmailAndPasswordResult.success => SignInOtpResult.success,
@@ -195,11 +212,39 @@ class SignInServiceImpl implements SignInService {
       return SignInNewOtpResult.tooManyRequests;
     }
 
-    final userId = await _authUser.getUserId(email);
+    final userId = await _users.getUserId(email);
     if (userId == null) return SignInNewOtpResult.userNotFound;
 
-    await _authSignIn.askOtp(email);
+    final askOtpResponse = await _authSignIn.askOtp(email);
+    if (askOtpResponse.isLimited) return SignInNewOtpResult.tooManyRequests;
+
+    _updateOtpRetryAfter();
 
     return SignInNewOtpResult.success;
+  }
+
+  Timer? _otpCooldownTimer;
+  final Duration _otpCooldownDuration = Duration(minutes: 1, seconds: 30);
+}
+
+extension on SignInServiceImpl {
+  void _updateOtpRetryAfter() {
+    _otpCooldownTimer?.cancel();
+
+    var remaining = _otpCooldownDuration;
+
+    _durationSubject.add(remaining);
+
+    _otpCooldownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      remaining -= const Duration(seconds: 1);
+
+      if (remaining <= Duration.zero) {
+        timer.cancel();
+        _durationSubject.add(Duration.zero);
+        return;
+      }
+
+      _durationSubject.add(remaining);
+    });
   }
 }

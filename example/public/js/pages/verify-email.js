@@ -1,6 +1,6 @@
 import { applyActionCode, getAuth } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-import { S } from "../i18n/i18n.js";
-import { app } from "../js/firebase.js";
+import { S } from "../../i18n/i18n.js";
+import { app } from "../common/firebase.js";
 
 const auth = getAuth(app);
 

@@ -30,6 +30,16 @@
 import 'package:firebase_database/firebase_database.dart';
 
 class DatabaseNodes {
+  static DatabaseReference connected() => _database.ref(".info/connected");
+
+  static DatabaseReference presences(String userId, {String? deviceId}) {
+    if (deviceId != null) {
+      return _database.ref("presences/$userId/$deviceId");
+    } else {
+      return _database.ref("presences/$userId");
+    }
+  }
+
   static DatabaseReference users(String userId) => _database.ref("users/${_DatabaseEncoder.encode(userId)}");
 
   static DatabaseReference emails(String email) => _database.ref("emails/${_DatabaseEncoder.encode(email)}");

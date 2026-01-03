@@ -38,3 +38,16 @@ class Otp extends Equatable {
   @override
   List<Object?> get props => [hash, salt];
 }
+
+class AskOtpResponse {
+  final bool success;
+  final bool isLimited;
+
+  const AskOtpResponse({required this.success, required this.isLimited});
+
+  factory AskOtpResponse.fromMap(Map<String, dynamic> map) {
+    return AskOtpResponse(success: map['success'] == true, isLimited: map['isLimited'] == true);
+  }
+
+  bool get isOk => success && !isLimited;
+}

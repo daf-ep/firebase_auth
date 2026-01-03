@@ -31,6 +31,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:injectable/injectable.dart';
 
+import '../../../../models/observe.dart';
 import '../../../../models/user/language.dart';
 import '../../../../models/user/session.dart';
 import '../../auth/auth.dart';
@@ -44,6 +45,7 @@ abstract class SessionsService {
   Future<void> add(Session session);
   Future<void> delete(String deviceId);
   Future<void> update({int? lastSignInTime, bool? isSignedIn, ThemeMode? themeMode, Language? language});
+  Observe<List<String>> get onlineDeviceIds;
 }
 
 @Singleton(as: SessionsService)
@@ -52,6 +54,9 @@ class SessionsServiceImpl implements SessionsService {
   final RemoteSessionsService _remote;
 
   SessionsServiceImpl(this._local, this._remote);
+
+  @override
+  Observe<List<String>> get onlineDeviceIds => _remote.onlineDeviceIds;
 
   @override
   Future<bool> isExists(String deviceId) => _remote.isExists(deviceId);
@@ -87,20 +92,8 @@ class SessionsServiceImpl implements SessionsService {
     final userId = AuthServices.user.userId.value;
     if (userId == null) return;
 
-    await _local.update(
-      lastSignInTime: lastSignInTime,
-      isSignedIn: isSignedIn,
-      themeMode: themeMode,
-      language: language,
-    );
-
-    await _remote.update(
-      lastSignInTime: lastSignInTime,
-      isSignedIn: isSignedIn,
-      themeMode: themeMode,
-      language: language,
-    );
-
+    await _local.update(lastSignInTime: lastSignInTime, themeMode: themeMode, language: language);
+    await _remote.update(lastSignInTime: lastSignInTime, themeMode: themeMode, language: language);
     await UserServices.version.upgrade();
 
     return;

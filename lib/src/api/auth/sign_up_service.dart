@@ -32,23 +32,23 @@ import 'package:flutter/material.dart';
 import 'package:injectable/injectable.dart';
 import 'package:string_validator/string_validator.dart';
 
-import '../../extensions/local.dart';
-import '../../models/auth/credentials.dart';
-import '../../models/auth/password_policy.dart';
-import '../../models/auth/rate_limite.dart';
-import '../../models/user/email.dart';
-import '../../models/user/metadata.dart';
-import '../../models/user/preferred_language.dart';
-import '../../models/user/session.dart';
-import '../../models/user/user.dart';
-import '../../results/auth.dart';
-import '../../results/password_validator.dart';
-import '../../results/sign_up.dart';
-import '../internal/auth/rate_limite/rate_limite_service.dart';
-import '../internal/auth/sign_up_service.dart';
-import '../internal/device/device_info_service.dart';
-import '../internal/device/network_service.dart';
-import '../internal/user/user/current_user_service.dart';
+import '../../../extensions/local.dart';
+import '../../../models/auth/credentials.dart';
+import '../../../models/auth/password_policy.dart';
+import '../../../models/auth/rate_limite.dart';
+import '../../../models/user/email.dart';
+import '../../../models/user/metadata.dart';
+import '../../../models/user/preferred_language.dart';
+import '../../../models/user/session.dart';
+import '../../../models/user/user.dart';
+import '../../../results/auth.dart';
+import '../../../results/password_validator.dart';
+import '../../../results/sign_up.dart';
+import '../../internal/auth/rate_limite/rate_limite_service.dart';
+import '../../internal/auth/sign_up_service.dart';
+import '../../internal/device/device_info_service.dart';
+import '../../internal/device/network_service.dart';
+import '../../internal/user/user/current_user_service.dart';
 
 abstract class SignUpService {
   Future<SignUpResult> signUpWithEmailAndPassword({

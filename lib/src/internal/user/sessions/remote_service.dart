@@ -27,15 +27,20 @@
 // is a violation of applicable intellectual property laws and will result
 // in legal action.
 
+import 'dart:async';
+
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:injectable/injectable.dart';
+import 'package:rxdart/subjects.dart';
 
 import '../../../../helpers/database.dart';
+import '../../../../models/observe.dart';
 import '../../../../models/user/language.dart';
 import '../../../../models/user/session.dart';
 import '../../../../models/user/user.dart';
-import '../../auth/auth.dart';
+import '../../auth/user_service.dart';
 import '../../device/device_info_service.dart';
 
 @internal
@@ -43,18 +48,26 @@ abstract class RemoteSessionsService {
   Future<bool> isExists(String deviceId);
   Future<void> add(Session session);
   Future<void> delete(String deviceId);
-  Future<void> update({int? lastSignInTime, bool? isSignedIn, ThemeMode? themeMode, Language? language});
+  Future<void> update({int? lastSignInTime, ThemeMode? themeMode, Language? language});
+  Observe<List<String>> get onlineDeviceIds;
 }
 
 @Singleton(as: RemoteSessionsService)
 class RemoteSessionsServiceImpl implements RemoteSessionsService {
   final DeviceInfoService _deviceInfo;
+  final AuthUserService _authUser;
 
-  RemoteSessionsServiceImpl(this._deviceInfo);
+  RemoteSessionsServiceImpl(this._deviceInfo, this._authUser);
+
+  final _onlineDeviceIdsSubject = BehaviorSubject<List<String>>.seeded([]);
+
+  @override
+  Observe<List<String>> get onlineDeviceIds =>
+      Observe<List<String>>(value: _onlineDeviceIdsSubject.value, stream: _onlineDeviceIdsSubject.stream);
 
   @override
   Future<bool> isExists(String deviceId) async {
-    final userId = AuthServices.user.userId.value;
+    final userId = _authUser.userId.value;
     if (userId == null) return false;
 
     final snapshot = await DatabaseNodes.users(userId).child(UserConstants.sessions).child(deviceId).get();
@@ -63,7 +76,7 @@ class RemoteSessionsServiceImpl implements RemoteSessionsService {
 
   @override
   Future<void> add(Session session) async {
-    final userId = AuthServices.user.userId.value;
+    final userId = _authUser.userId.value;
     if (userId == null) return;
 
     await DatabaseNodes.users(userId).child(UserConstants.sessions).child(session.deviceId).set(session.toMap());
@@ -71,7 +84,7 @@ class RemoteSessionsServiceImpl implements RemoteSessionsService {
 
   @override
   Future<void> delete(String deviceId) async {
-    final userId = AuthServices.user.userId.value;
+    final userId = _authUser.userId.value;
     if (userId == null) return;
 
     await DatabaseNodes.users(userId).child(UserConstants.sessions).child(deviceId).remove();
@@ -79,16 +92,13 @@ class RemoteSessionsServiceImpl implements RemoteSessionsService {
 
   @override
   Future<void> update({int? lastSignInTime, bool? isSignedIn, ThemeMode? themeMode, Language? language}) async {
-    final userId = AuthServices.user.userId.value;
+    final userId = _authUser.userId.value;
     if (userId == null) return;
 
     final target = DatabaseNodes.users(userId).child(UserConstants.sessions).child(_deviceInfo.identifier);
 
     if (lastSignInTime != null) {
       await target.child(SessionConstants.metadata).child(SessionMetadataConstants.lastSignInTime).set(lastSignInTime);
-    }
-    if (isSignedIn != null) {
-      await target.child(SessionConstants.metadata).child(SessionMetadataConstants.isSignedIn).set(isSignedIn);
     }
 
     final ipInfo = _deviceInfo.ipInfo;
@@ -115,5 +125,93 @@ class RemoteSessionsServiceImpl implements RemoteSessionsService {
     if (language != null) {
       await target.child(SessionConstants.preferences).child(SessionPreferencesConstants.language).set(language.name);
     }
+  }
+
+  @PostConstruct()
+  init() async {
+    listenToDevicesConnected();
+    listenToBackground();
+  }
+
+  StreamSubscription<DatabaseEvent>? _connectedSub;
+  StreamSubscription<DatabaseEvent>? _presenceIds;
+
+  bool _presenceActive = false;
+
+  String? _memoryUserId;
+}
+
+extension on RemoteSessionsServiceImpl {
+  void listenToDevicesConnected() {
+    _authUser.userId.stream
+        .distinct((prev, next) {
+          if (prev == next) return true;
+          return false;
+        })
+        .listen((userId) {
+          _connectedSub?.cancel();
+          _connectedSub = null;
+
+          _presenceIds?.cancel();
+          _presenceIds = null;
+
+          if (userId == null) {
+            if (_memoryUserId != null) {
+              _setUserPresence(_memoryUserId, false);
+              _memoryUserId = null;
+            }
+            return;
+          }
+
+          _memoryUserId = userId;
+
+          _connectedSub = DatabaseNodes.connected().onValue.listen((event) {
+            final isConnected = event.snapshot.value == true;
+
+            final ref = DatabaseNodes.presences(userId, deviceId: _deviceInfo.identifier);
+
+            if (isConnected && !_presenceActive) {
+              _presenceActive = true;
+              ref.onDisconnect().remove();
+              ref.set(true);
+            }
+
+            if (!isConnected) {
+              _presenceActive = false;
+            }
+          });
+
+          _presenceIds = DatabaseNodes.presences(userId).onValue.listen((values) {
+            final raw = values.snapshot.value;
+            if (raw is! Map) {
+              _onlineDeviceIdsSubject.value = const [];
+              return;
+            }
+
+            final onlineDeviceIds = raw.entries
+                .where((entry) => entry.value == true)
+                .map((entry) => entry.key.toString())
+                .toList();
+
+            _onlineDeviceIdsSubject.value = onlineDeviceIds;
+          });
+        });
+  }
+
+  void listenToBackground() {
+    AppLifecycleListener(
+      onResume: () => _setUserPresence(_authUser.userId.value, true),
+      onInactive: () => _setUserPresence(_authUser.userId.value, false),
+    );
+  }
+
+  void _setUserPresence(String? userId, bool isOnline) {
+    final deviceId = _deviceInfo.identifier;
+    if (deviceId == "-") return;
+
+    if (userId == null) return;
+
+    final ref = DatabaseNodes.presences(userId, deviceId: _deviceInfo.identifier);
+    ref.set(isOnline);
   }
 }

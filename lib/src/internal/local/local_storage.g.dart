@@ -358,8 +358,25 @@ class $RateLimiteTableTable extends RateLimiteTable
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _lockUntilMeta = const VerificationMeta(
+    'lockUntil',
+  );
   @override
-  List<GeneratedColumn> get $columns => [key, feature, count, resetAt];
+  late final GeneratedColumn<int> lockUntil = GeneratedColumn<int>(
+    'lock_until',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    key,
+    feature,
+    count,
+    resetAt,
+    lockUntil,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -404,6 +421,12 @@ class $RateLimiteTableTable extends RateLimiteTable
     } else if (isInserting) {
       context.missing(_resetAtMeta);
     }
+    if (data.containsKey('lock_until')) {
+      context.handle(
+        _lockUntilMeta,
+        lockUntil.isAcceptableOrUnknown(data['lock_until']!, _lockUntilMeta),
+      );
+    }
     return context;
   }
 
@@ -429,6 +452,10 @@ class $RateLimiteTableTable extends RateLimiteTable
         DriftSqlType.int,
         data['${effectivePrefix}reset_at'],
       )!,
+      lockUntil: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}lock_until'],
+      ),
     );
   }
 
@@ -444,11 +471,13 @@ class RateLimiteTableData extends DataClass
   final String feature;
   final int count;
   final int resetAt;
+  final int? lockUntil;
   const RateLimiteTableData({
     required this.key,
     required this.feature,
     required this.count,
     required this.resetAt,
+    this.lockUntil,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -457,6 +486,9 @@ class RateLimiteTableData extends DataClass
     map['feature'] = Variable<String>(feature);
     map['count'] = Variable<int>(count);
     map['reset_at'] = Variable<int>(resetAt);
+    if (!nullToAbsent || lockUntil != null) {
+      map['lock_until'] = Variable<int>(lockUntil);
+    }
     return map;
   }
 
@@ -466,6 +498,9 @@ class RateLimiteTableData extends DataClass
       feature: Value(feature),
       count: Value(count),
       resetAt: Value(resetAt),
+      lockUntil: lockUntil == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lockUntil),
     );
   }
 
@@ -479,6 +514,7 @@ class RateLimiteTableData extends DataClass
       feature: serializer.fromJson<String>(json['feature']),
       count: serializer.fromJson<int>(json['count']),
       resetAt: serializer.fromJson<int>(json['resetAt']),
+      lockUntil: serializer.fromJson<int?>(json['lockUntil']),
     );
   }
   @override
@@ -489,6 +525,7 @@ class RateLimiteTableData extends DataClass
       'feature': serializer.toJson<String>(feature),
       'count': serializer.toJson<int>(count),
       'resetAt': serializer.toJson<int>(resetAt),
+      'lockUntil': serializer.toJson<int?>(lockUntil),
     };
   }
 
@@ -497,11 +534,13 @@ class RateLimiteTableData extends DataClass
     String? feature,
     int? count,
     int? resetAt,
+    Value<int?> lockUntil = const Value.absent(),
   }) => RateLimiteTableData(
     key: key ?? this.key,
     feature: feature ?? this.feature,
     count: count ?? this.count,
     resetAt: resetAt ?? this.resetAt,
+    lockUntil: lockUntil.present ? lockUntil.value : this.lockUntil,
   );
   RateLimiteTableData copyWithCompanion(RateLimiteTableCompanion data) {
     return RateLimiteTableData(
@@ -509,6 +548,7 @@ class RateLimiteTableData extends DataClass
       feature: data.feature.present ? data.feature.value : this.feature,
       count: data.count.present ? data.count.value : this.count,
       resetAt: data.resetAt.present ? data.resetAt.value : this.resetAt,
+      lockUntil: data.lockUntil.present ? data.lockUntil.value : this.lockUntil,
     );
   }
 
@@ -518,13 +558,14 @@ class RateLimiteTableData extends DataClass
           ..write('key: $key, ')
           ..write('feature: $feature, ')
           ..write('count: $count, ')
-          ..write('resetAt: $resetAt')
+          ..write('resetAt: $resetAt, ')
+          ..write('lockUntil: $lockUntil')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(key, feature, count, resetAt);
+  int get hashCode => Object.hash(key, feature, count, resetAt, lockUntil);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -532,7 +573,8 @@ class RateLimiteTableData extends DataClass
           other.key == this.key &&
           other.feature == this.feature &&
           other.count == this.count &&
-          other.resetAt == this.resetAt);
+          other.resetAt == this.resetAt &&
+          other.lockUntil == this.lockUntil);
 }
 
 class RateLimiteTableCompanion extends UpdateCompanion<RateLimiteTableData> {
@@ -540,12 +582,14 @@ class RateLimiteTableCompanion extends UpdateCompanion<RateLimiteTableData> {
   final Value<String> feature;
   final Value<int> count;
   final Value<int> resetAt;
+  final Value<int?> lockUntil;
   final Value<int> rowid;
   const RateLimiteTableCompanion({
     this.key = const Value.absent(),
     this.feature = const Value.absent(),
     this.count = const Value.absent(),
     this.resetAt = const Value.absent(),
+    this.lockUntil = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   RateLimiteTableCompanion.insert({
@@ -553,6 +597,7 @@ class RateLimiteTableCompanion extends UpdateCompanion<RateLimiteTableData> {
     required String feature,
     required int count,
     required int resetAt,
+    this.lockUntil = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : key = Value(key),
        feature = Value(feature),
@@ -563,6 +608,7 @@ class RateLimiteTableCompanion extends UpdateCompanion<RateLimiteTableData> {
     Expression<String>? feature,
     Expression<int>? count,
     Expression<int>? resetAt,
+    Expression<int>? lockUntil,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -570,6 +616,7 @@ class RateLimiteTableCompanion extends UpdateCompanion<RateLimiteTableData> {
       if (feature != null) 'feature': feature,
       if (count != null) 'count': count,
       if (resetAt != null) 'reset_at': resetAt,
+      if (lockUntil != null) 'lock_until': lockUntil,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -579,6 +626,7 @@ class RateLimiteTableCompanion extends UpdateCompanion<RateLimiteTableData> {
     Value<String>? feature,
     Value<int>? count,
     Value<int>? resetAt,
+    Value<int?>? lockUntil,
     Value<int>? rowid,
   }) {
     return RateLimiteTableCompanion(
@@ -586,6 +634,7 @@ class RateLimiteTableCompanion extends UpdateCompanion<RateLimiteTableData> {
       feature: feature ?? this.feature,
       count: count ?? this.count,
       resetAt: resetAt ?? this.resetAt,
+      lockUntil: lockUntil ?? this.lockUntil,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -605,6 +654,9 @@ class RateLimiteTableCompanion extends UpdateCompanion<RateLimiteTableData> {
     if (resetAt.present) {
       map['reset_at'] = Variable<int>(resetAt.value);
     }
+    if (lockUntil.present) {
+      map['lock_until'] = Variable<int>(lockUntil.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -618,6 +670,7 @@ class RateLimiteTableCompanion extends UpdateCompanion<RateLimiteTableData> {
           ..write('feature: $feature, ')
           ..write('count: $count, ')
           ..write('resetAt: $resetAt, ')
+          ..write('lockUntil: $lockUntil, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -828,6 +881,7 @@ typedef $$RateLimiteTableTableCreateCompanionBuilder =
       required String feature,
       required int count,
       required int resetAt,
+      Value<int?> lockUntil,
       Value<int> rowid,
     });
 typedef $$RateLimiteTableTableUpdateCompanionBuilder =
@@ -836,6 +890,7 @@ typedef $$RateLimiteTableTableUpdateCompanionBuilder =
       Value<String> feature,
       Value<int> count,
       Value<int> resetAt,
+      Value<int?> lockUntil,
       Value<int> rowid,
     });
 
@@ -865,6 +920,11 @@ class $$RateLimiteTableTableFilterComposer
 
   ColumnFilters<int> get resetAt => $composableBuilder(
     column: $table.resetAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get lockUntil => $composableBuilder(
+    column: $table.lockUntil,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -897,6 +957,11 @@ class $$RateLimiteTableTableOrderingComposer
     column: $table.resetAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get lockUntil => $composableBuilder(
+    column: $table.lockUntil,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$RateLimiteTableTableAnnotationComposer
@@ -919,6 +984,9 @@ class $$RateLimiteTableTableAnnotationComposer
 
   GeneratedColumn<int> get resetAt =>
       $composableBuilder(column: $table.resetAt, builder: (column) => column);
+
+  GeneratedColumn<int> get lockUntil =>
+      $composableBuilder(column: $table.lockUntil, builder: (column) => column);
 }
 
 class $$RateLimiteTableTableTableManager
@@ -962,12 +1030,14 @@ class $$RateLimiteTableTableTableManager
                 Value<String> feature = const Value.absent(),
                 Value<int> count = const Value.absent(),
                 Value<int> resetAt = const Value.absent(),
+                Value<int?> lockUntil = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => RateLimiteTableCompanion(
                 key: key,
                 feature: feature,
                 count: count,
                 resetAt: resetAt,
+                lockUntil: lockUntil,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -976,12 +1046,14 @@ class $$RateLimiteTableTableTableManager
                 required String feature,
                 required int count,
                 required int resetAt,
+                Value<int?> lockUntil = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => RateLimiteTableCompanion.insert(
                 key: key,
                 feature: feature,
                 count: count,
                 resetAt: resetAt,
+                lockUntil: lockUntil,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

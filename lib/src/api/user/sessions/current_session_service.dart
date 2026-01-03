@@ -27,15 +27,17 @@
 // is a violation of applicable intellectual property laws and will result
 // in legal action.
 
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:injectable/injectable.dart';
 import 'package:rxdart/subjects.dart';
 
+import '../../../../extensions/language.dart';
 import '../../../../models/observe.dart';
 import '../../../../models/user/language.dart';
 import '../../../../models/user/session.dart';
 import '../../../internal/device/device_info_service.dart';
+import '../../../internal/settings/preferences_service.dart';
 import '../../../internal/user/sessions/sessions_service.dart';
 import '../../../internal/user/user/current_user_service.dart';
 
@@ -52,8 +54,9 @@ class CurrentSessionServiceImpl implements CurrentSessionService {
   final DeviceInfoService _deviceInfo;
   final CurrentUserService _currentUser;
   final SessionsService _sessions;
+  final PreferencesService _preferences;
 
-  CurrentSessionServiceImpl(this._deviceInfo, this._currentUser, this._sessions);
+  CurrentSessionServiceImpl(this._deviceInfo, this._currentUser, this._sessions, this._preferences);
 
   final _sessionSubject = BehaviorSubject<Session?>.seeded(null);
 
@@ -65,6 +68,7 @@ class CurrentSessionServiceImpl implements CurrentSessionService {
     final userId = _currentUser.data.value?.userId;
     if (userId == null) return;
 
+    await _preferences.locale.set(language.convert().languageCode);
     await _sessions.update(language: language);
   }
 
@@ -73,6 +77,7 @@ class CurrentSessionServiceImpl implements CurrentSessionService {
     final userId = _currentUser.data.value?.userId;
     if (userId == null) return;
 
+    await _preferences.themeMode.set(themeMode);
     await _sessions.update(themeMode: themeMode);
   }
 
@@ -86,18 +91,17 @@ extension on CurrentSessionServiceImpl {
   void listenToCurrentSession() {
     _currentUser.data.stream
         .distinct((prev, next) {
-          if (prev?.metadata.updatedAt == next?.metadata.updatedAt) return true;
+          if (mapEquals(
+            prev?.sessions.where((session) => session.deviceId == _deviceInfo.identifier).firstOrNull?.toMap() ?? {},
+            next?.sessions.where((session) => session.deviceId == _deviceInfo.identifier).firstOrNull?.toMap() ?? {},
+          )) {
+            return true;
+          }
           return false;
         })
         .listen((user) {
           final deviceId = _deviceInfo.identifier;
           final sessions = user?.sessions;
-
-          final deviceIds = sessions?.map((session) => session.deviceId).toList();
-
-          if (deviceIds != null && !deviceIds.contains(deviceId)) {
-            FirebaseAuth.instance.signOut();
-          }
 
           _sessionSubject.value = sessions?.where((session) => session.deviceId == deviceId).firstOrNull;
         });

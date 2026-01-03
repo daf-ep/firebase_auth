@@ -88,7 +88,11 @@ enum ForgotPasswordResult {
   ///
   /// A password reset email or OTP was successfully dispatched to the user.
   /// The UI should prompt the user to check their inbox.
-  success,
+  success;
+
+  bool get isSuccess => this == success;
+
+  bool get isError => !isSuccess;
 }
 
 /// {@template forgot_password_otp_result}

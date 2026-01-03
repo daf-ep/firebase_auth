@@ -42,7 +42,6 @@ class SessionConstants {
 class SessionMetadataConstants {
   static const String createdAt = "created_at";
   static const String updatedAt = "updated_at";
-  static const String isSignedIn = "is_signed_in";
   static const String lastSignInTime = "last_sign_in_time";
 }
 
@@ -136,7 +135,7 @@ class SessionMetadata extends Equatable {
     return SessionMetadata(
       createdAt: map[SessionMetadataConstants.createdAt],
       updatedAt: map[SessionMetadataConstants.updatedAt],
-      isSignedIn: map[SessionMetadataConstants.isSignedIn],
+      isSignedIn: false,
       lastSignInTime: map[SessionMetadataConstants.lastSignInTime],
     );
   }
@@ -154,7 +153,6 @@ class SessionMetadata extends Equatable {
     return {
       SessionMetadataConstants.createdAt: createdAt,
       SessionMetadataConstants.updatedAt: updatedAt,
-      SessionMetadataConstants.isSignedIn: isSignedIn,
       SessionMetadataConstants.lastSignInTime: lastSignInTime,
     };
   }

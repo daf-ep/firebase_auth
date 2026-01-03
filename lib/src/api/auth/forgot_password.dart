@@ -30,13 +30,13 @@
 import 'package:injectable/injectable.dart';
 import 'package:string_validator/string_validator.dart';
 
-import '../../models/auth/rate_limite.dart';
-import '../../results/forgot_password.dart';
-import '../internal/auth/forgot_password_service.dart';
-import '../internal/auth/rate_limite/rate_limite_service.dart';
-import '../internal/auth/user_service.dart';
-import '../internal/device/device_info_service.dart';
-import '../internal/device/network_service.dart';
+import '../../../models/auth/rate_limite.dart';
+import '../../../results/forgot_password.dart';
+import '../../internal/auth/forgot_password_service.dart';
+import '../../internal/auth/rate_limite/rate_limite_service.dart';
+import '../../internal/device/device_info_service.dart';
+import '../../internal/device/network_service.dart';
+import '../../internal/users/users_service.dart';
 
 abstract class ForgotPasswordService {
   Future<ForgotPasswordResult> reset(String email);
@@ -47,10 +47,10 @@ class ForgotPasswordServiceImpl implements ForgotPasswordService {
   final DeviceInfoService _deviceInfo;
   final NetworkService _network;
   final AuthForgotPasswordService _forgotPassword;
-  final AuthUserService _authUser;
   final RateLimiteService _rateLimite;
+  final UsersService _users;
 
-  ForgotPasswordServiceImpl(this._deviceInfo, this._network, this._forgotPassword, this._authUser, this._rateLimite);
+  ForgotPasswordServiceImpl(this._deviceInfo, this._network, this._forgotPassword, this._rateLimite, this._users);
 
   @override
   Future<ForgotPasswordResult> reset(String email) async {
@@ -65,7 +65,7 @@ class ForgotPasswordServiceImpl implements ForgotPasswordService {
       return ForgotPasswordResult.tooManyRequests;
     }
 
-    final userId = await _authUser.getUserId(email);
+    final userId = await _users.getUserId(email);
     if (userId == null) return ForgotPasswordResult.userNotFound;
 
     await _forgotPassword.reset(email);

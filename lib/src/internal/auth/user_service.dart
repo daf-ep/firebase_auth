@@ -32,7 +32,6 @@ import 'package:flutter/foundation.dart';
 import 'package:injectable/injectable.dart';
 import 'package:rxdart/subjects.dart';
 
-import '../../../helpers/database.dart';
 import '../../../models/observe.dart';
 
 @internal
@@ -40,7 +39,6 @@ abstract class AuthUserService {
   Observe<bool> get isUserConnected;
   Observe<String?> get userId;
   Observe<bool> get isEmailVerified;
-  Future<String?> getUserId(String email);
   Future<void> signOut();
 }
 
@@ -60,15 +58,6 @@ class AuthUserServiceImpl implements AuthUserService {
   @override
   Observe<bool> get isEmailVerified =>
       Observe<bool>(value: _isEmailVerifiedSubject.value, stream: _isEmailVerifiedSubject.stream);
-
-  @override
-  Future<String?> getUserId(String email) async {
-    final snapshot = await DatabaseNodes.emails(email).get();
-    final raw = snapshot.value;
-    if (raw is! String) return null;
-
-    return raw;
-  }
 
   @override
   Future<void> signOut() => _instance.signOut();

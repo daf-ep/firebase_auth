@@ -27,19 +27,31 @@
 // is a violation of applicable intellectual property laws and will result
 // in legal action.
 
+import 'package:example/src/common/widgets/top_snack_bar.dart';
+import 'package:fiber_firebase_auth/fiber_firebase_auth.dart';
 import 'package:flutter/widgets.dart';
 
 import '../../../common/provider/state_provider.dart';
 
 class OtpState {
+  Duration resendOtpDelay;
   TextEditingController otpController = TextEditingController();
 
-  OtpState();
+  OtpState({required this.resendOtpDelay});
 }
 
 class OtpProvider extends StateProvider<OtpState> {
-  OtpProvider() : super(OtpState()) {
+  final _signIn = FiberAuth.signIn;
+
+  OtpProvider() : super(OtpState(resendOtpDelay: FiberAuth.signIn.resendOtpDelay.value)) {
     state.otpController.addListener(_reload);
+
+    _signIn.resendOtpDelay.stream
+        .listen((duration) {
+          state.resendOtpDelay = duration;
+          notifyListeners();
+        })
+        .store(this);
   }
 
   @override
@@ -54,11 +66,35 @@ class OtpProvider extends StateProvider<OtpState> {
     final otp = state.otpController.text.trim();
 
     if (otp.length == 6) {
-      
+      final result = await _signIn.verifyOtp(otp);
+      if (!context.mounted) return;
+
+      if (result.isError) {
+        context.error(result.message);
+      } else {
+        context.success(result.message);
+      }
     }
   }
+
+  Future<void> askNewOtp(BuildContext context) => _signIn.askNewOtp();
 }
 
 extension OtpStateExtension on OtpState {
   bool get isValidateButtonEnabled => otpController.text.trim().isNotEmpty;
+
+  bool get canResendOtp => resendOtpDelay.inSeconds == 0;
+}
+
+extension SignInOtpResultMessage on SignInOtpResult {
+  String get message => switch (this) {
+    SignInOtpResult.emptyOtp => 'Please enter the verification code.',
+    SignInOtpResult.noInternet => 'No internet connection. Please try again.',
+    SignInOtpResult.invalidOrExpired => 'The code is invalid or has expired.',
+    SignInOtpResult.tooManyRequests => 'Too many attempts. Please try again later.',
+    SignInOtpResult.invalidCredentials => 'The login information is incorrect.',
+    SignInOtpResult.userDisabled => 'This account has been disabled.',
+    SignInOtpResult.unknown => 'An unexpected error occurred. Please try again.',
+    SignInOtpResult.success => 'Code verified successfully.',
+  };
 }

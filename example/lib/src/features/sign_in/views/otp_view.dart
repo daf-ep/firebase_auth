@@ -27,6 +27,7 @@
 // is a violation of applicable intellectual property laws and will result
 // in legal action.
 
+import 'package:example/src/common/widgets/link.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -58,6 +59,11 @@ class OtpView extends StatelessWidget {
                 isEnabled: state.isValidateButtonEnabled,
                 onPressed: () => provider.validate(context),
                 label: "Validate",
+              ),
+              AppLink(
+                isEnabled: state.canResendOtp,
+                text: "New OTP ${state.resendOtpDelay.inSeconds}",
+                onPressed: () => provider.askNewOtp(context),
               ),
             ],
           );
