@@ -27,47 +27,46 @@
 // is a violation of applicable intellectual property laws and will result
 // in legal action.
 
-import 'dart:convert';
+import 'dart:async';
 
-import 'package:drift/drift.dart';
+import 'package:flutter/foundation.dart';
 import 'package:injectable/injectable.dart';
+import 'package:rxdart/subjects.dart';
 
-import '../../auth/user_service.dart';
-import '../../local/local_storage.dart';
-import '../user.dart';
+import '../../../models/observe.dart';
+import '../../../models/user/user.dart';
+import '../auth/user_service.dart';
+import 'helpers/current_user_helper_service.dart';
 
-abstract class LocalUserMetadataService {
-  Future<void> update({int? lastSignInTime});
+@internal
+abstract class CurrentUserService {
+  Observe<User?> get data;
+  Future<void> add(User user);
+  Future<void> delete();
 }
 
-@Singleton(as: LocalUserMetadataService)
-class LocalUserMetadataServiceImpl implements LocalUserMetadataService {
+@Singleton(as: CurrentUserService)
+class CurrentUserServiceImpl implements CurrentUserService {
+  final CurrentUserHelperService _helper;
   final AuthUserService _authUser;
 
-  LocalUserMetadataServiceImpl(this._authUser);
+  CurrentUserServiceImpl(this._helper, this._authUser);
+
+  final _userSubject = BehaviorSubject<User?>.seeded(null);
 
   @override
-  Future<void> update({int? lastSignInTime}) async {
+  Observe<User?> get data => _helper.data;
+
+  @override
+  Future<void> add(User user) => _helper.add(user);
+
+  @override
+  Future<void> delete() async {
     final userId = _authUser.userId.value;
     if (userId == null) return;
 
-    final user = UserServices.current.data.value;
-    if (user == null) return;
+    _userSubject.value = null;
 
-    if (lastSignInTime == null) return;
-
-    final updatedUser = user.copyWith(
-      metadata: user.metadata.copyWith(
-        updatedAt: DateTime.now().millisecondsSinceEpoch,
-        lastSignInTime: lastSignInTime,
-      ),
-    );
-
-    await (_db.update(_table)..where((tbl) => tbl.userId.equals(userId))).write(
-      UserTableCompanion(data: Value(json.encode(updatedUser.toMap()))),
-    );
+    return _helper.delete();
   }
-
-  LocalStorage get _db => LocalStorage.instance;
-  $UserTableTable get _table => _db.userTable;
 }

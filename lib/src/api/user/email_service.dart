@@ -29,49 +29,29 @@
 
 import 'package:injectable/injectable.dart';
 
-import '../../../helpers/database.dart';
-import '../../../models/user/user.dart';
+import '../../../models/observe.dart';
+import '../../../models/user/email.dart';
+import '../../internal/current_user/email_service.dart';
 
-abstract class UsersService {
-  Future<String?> getUserId(String email);
+abstract class UserEmailService {
+  Observe<String?> get email;
 
-  Future<User?> getUser(String userId);
+  Observe<List<EmailHistories>?> get histories;
 }
 
-@Singleton(as: UsersService)
-class UsersServiceImpl implements UsersService {
-  @override
-  Future<String?> getUserId(String email) async {
-    final snapshot = await DatabaseNodes.emails(email).get();
-    final raw = snapshot.value;
-    if (raw is! String) return null;
+@Singleton(as: UserEmailService)
+class UserEmailServiceImpl implements UserEmailService {
+  final CurrentUserEmailService _currentUserEmailService;
 
-    return raw;
-  }
+  UserEmailServiceImpl(this._currentUserEmailService);
 
   @override
-  Future<User?> getUser(String userId) async {
-    final snapshot = await DatabaseNodes.users(userId).get();
-    final raw = snapshot.value;
-    if (raw is! Map) return null;
+  Observe<String?> get email =>
+      Observe<String?>(value: _currentUserEmailService.current.value, stream: _currentUserEmailService.current.stream);
 
-    final map = raw.entries.fold<Map<String, dynamic>>({}, (map, entry) {
-      final key = entry.key.toString();
-      final value = _cast(entry.value);
-      map[key] = value;
-      return map;
-    });
-    return User.fromMap(userId, map);
-  }
-}
-
-extension on UsersServiceImpl {
-  dynamic _cast(dynamic value) {
-    if (value is Map) {
-      return value.map((key, val) => MapEntry(key.toString(), _cast(val)));
-    } else if (value is List) {
-      return value.map(_cast).toList();
-    }
-    return value;
-  }
+  @override
+  Observe<List<EmailHistories>?> get histories => Observe<List<EmailHistories>?>(
+    value: _currentUserEmailService.histories.value,
+    stream: _currentUserEmailService.histories.stream,
+  );
 }

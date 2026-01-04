@@ -181,9 +181,9 @@ class DeviceInfoServiceImpl implements DeviceInfoService {
   @override
   Stream<DeviceCategory> get deviceStream => _deviceSubject.stream;
 
-  @PostConstruct()
-  init() async {
-    getDeviceInfo();
+  @PostConstruct(preResolve: true)
+  Future<void> init() async {
+    await getDeviceInfo();
     getIpInfo();
     getDevice();
     getOs();
@@ -193,7 +193,7 @@ class DeviceInfoServiceImpl implements DeviceInfoService {
 }
 
 extension on DeviceInfoServiceImpl {
-  void getDeviceInfo() async {
+  Future<void> getDeviceInfo() async {
     final deviceInfoPlugin = DeviceInfoPlugin();
 
     String? identifier;

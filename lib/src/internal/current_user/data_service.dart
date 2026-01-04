@@ -29,49 +29,22 @@
 
 import 'package:injectable/injectable.dart';
 
-import '../../../helpers/database.dart';
-import '../../../models/user/user.dart';
+import '../../../models/observe.dart';
+import 'helpers/current_user_helper_service.dart';
 
-abstract class UsersService {
-  Future<String?> getUserId(String email);
-
-  Future<User?> getUser(String userId);
+abstract class CurrentUserDataService {
+  Observe<Map<String, dynamic>?> get data;
 }
 
-@Singleton(as: UsersService)
-class UsersServiceImpl implements UsersService {
-  @override
-  Future<String?> getUserId(String email) async {
-    final snapshot = await DatabaseNodes.emails(email).get();
-    final raw = snapshot.value;
-    if (raw is! String) return null;
+@Singleton(as: CurrentUserDataService)
+class CurrentUserDataServiceImpl implements CurrentUserDataService {
+  final CurrentUserHelperService _helper;
 
-    return raw;
-  }
+  CurrentUserDataServiceImpl(this._helper);
 
   @override
-  Future<User?> getUser(String userId) async {
-    final snapshot = await DatabaseNodes.users(userId).get();
-    final raw = snapshot.value;
-    if (raw is! Map) return null;
-
-    final map = raw.entries.fold<Map<String, dynamic>>({}, (map, entry) {
-      final key = entry.key.toString();
-      final value = _cast(entry.value);
-      map[key] = value;
-      return map;
-    });
-    return User.fromMap(userId, map);
-  }
-}
-
-extension on UsersServiceImpl {
-  dynamic _cast(dynamic value) {
-    if (value is Map) {
-      return value.map((key, val) => MapEntry(key.toString(), _cast(val)));
-    } else if (value is List) {
-      return value.map(_cast).toList();
-    }
-    return value;
-  }
+  Observe<Map<String, dynamic>?> get data => Observe<Map<String, dynamic>?>(
+    value: _helper.data.value?.data,
+    stream: _helper.data.stream.map((data) => data?.data),
+  );
 }

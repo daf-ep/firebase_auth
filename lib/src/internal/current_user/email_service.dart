@@ -27,46 +27,33 @@
 // is a violation of applicable intellectual property laws and will result
 // in legal action.
 
-import 'dart:async';
-import 'dart:convert';
-
-import 'package:drift/drift.dart';
-import 'package:flutter/foundation.dart';
 import 'package:injectable/injectable.dart';
 
-import '../../../../models/user/user.dart';
-import '../../local/local_storage.dart';
+import '../../../models/observe.dart';
+import '../../../models/user/email.dart';
+import 'helpers/current_user_helper_service.dart';
 
-@internal
-abstract class LocalCurrentUserService {
-  Future<void> add(User user);
-  Future<void> delete(String userId);
+abstract class CurrentUserEmailService {
+  Observe<String?> get current;
+
+  Observe<List<EmailHistories>?> get histories;
 }
 
-@Singleton(as: LocalCurrentUserService)
-class LocalCurrentUserServiceImpl implements LocalCurrentUserService {
-  @override
-  Future<void> add(User user) => _db.transaction(() async {
-    final existing = await (_db.select(_table)..where((tbl) => tbl.userId.equals(user.userId))).getSingleOrNull();
+@Singleton(as: CurrentUserEmailService)
+class CurrentUserEmailServiceImpl implements CurrentUserEmailService {
+  final CurrentUserHelperService _helper;
 
-    if (existing != null && existing.version >= user.version) return;
-
-    await _db
-        .into(_table)
-        .insert(
-          UserTableData(
-            userId: user.userId,
-            email: user.email.value,
-            version: user.version,
-            data: json.encode(user.toMap()),
-          ),
-          mode: InsertMode.insertOrReplace,
-        );
-  });
+  CurrentUserEmailServiceImpl(this._helper);
 
   @override
-  Future<void> delete(String userId) => (_db.delete(_table)..where((tbl) => tbl.userId.equals(userId))).go();
+  Observe<String?> get current => Observe<String?>(
+    value: _helper.data.value?.email.value,
+    stream: _helper.data.stream.map((user) => user?.email.value),
+  );
 
-  LocalStorage get _db => LocalStorage.instance;
-  $UserTableTable get _table => _db.userTable;
+  @override
+  Observe<List<EmailHistories>?> get histories => Observe<List<EmailHistories>?>(
+    value: _helper.data.value?.email.histories,
+    stream: _helper.data.stream.map((user) => user?.email.histories),
+  );
 }

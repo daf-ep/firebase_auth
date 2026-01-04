@@ -46,9 +46,9 @@ import '../../../results/password_validator.dart';
 import '../../../results/sign_up.dart';
 import '../../internal/auth/rate_limite/rate_limite_service.dart';
 import '../../internal/auth/sign_up_service.dart';
+import '../../internal/current_user/current_user_service.dart';
 import '../../internal/device/device_info_service.dart';
 import '../../internal/device/network_service.dart';
-import '../../internal/user/user/current_user_service.dart';
 
 abstract class SignUpService {
   Future<SignUpResult> signUpWithEmailAndPassword({
@@ -144,6 +144,7 @@ class SignUpServiceImpl implements SignUpService {
         lastSignInTime: DateTime.now().millisecondsSinceEpoch,
       ),
       preferredLanguage: PreferredLanguage(current: PlatformDispatcher.instance.locale.convert(), histories: []),
+      passwordHistories: [],
       data: data,
     );
 

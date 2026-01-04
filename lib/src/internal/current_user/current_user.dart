@@ -27,51 +27,24 @@
 // is a violation of applicable intellectual property laws and will result
 // in legal action.
 
-import 'package:injectable/injectable.dart';
+import 'package:flutter/foundation.dart';
+import 'package:get_it/get_it.dart';
 
-import '../../../helpers/database.dart';
-import '../../../models/user/user.dart';
+import 'current_user_service.dart';
+import 'data_service.dart';
+import 'email_service.dart';
+import 'metadata_service.dart';
+import 'password_histories.dart';
+import 'preferred_language_service.dart';
+import 'sessions_service.dart';
 
-abstract class UsersService {
-  Future<String?> getUserId(String email);
-
-  Future<User?> getUser(String userId);
-}
-
-@Singleton(as: UsersService)
-class UsersServiceImpl implements UsersService {
-  @override
-  Future<String?> getUserId(String email) async {
-    final snapshot = await DatabaseNodes.emails(email).get();
-    final raw = snapshot.value;
-    if (raw is! String) return null;
-
-    return raw;
-  }
-
-  @override
-  Future<User?> getUser(String userId) async {
-    final snapshot = await DatabaseNodes.users(userId).get();
-    final raw = snapshot.value;
-    if (raw is! Map) return null;
-
-    final map = raw.entries.fold<Map<String, dynamic>>({}, (map, entry) {
-      final key = entry.key.toString();
-      final value = _cast(entry.value);
-      map[key] = value;
-      return map;
-    });
-    return User.fromMap(userId, map);
-  }
-}
-
-extension on UsersServiceImpl {
-  dynamic _cast(dynamic value) {
-    if (value is Map) {
-      return value.map((key, val) => MapEntry(key.toString(), _cast(val)));
-    } else if (value is List) {
-      return value.map(_cast).toList();
-    }
-    return value;
-  }
+@internal
+class CurrentUserServices {
+  static CurrentUserService get user => GetIt.I.get();
+  static CurrentSessionsService get sessions => GetIt.I.get();
+  static CurrentUserMetadataService get metadata => GetIt.I.get();
+  static CurrentUserPreferredLanguageService get preferredLanguage => GetIt.I.get();
+  static CurrentUserEmailService get email => GetIt.I.get();
+  static CurrentUserPasswordHistoriesService get passwordHistories => GetIt.I.get();
+  static CurrentUserDataService get data => GetIt.I.get();
 }

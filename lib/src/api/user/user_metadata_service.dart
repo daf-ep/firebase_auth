@@ -28,10 +28,9 @@
 // in legal action.
 
 import 'package:injectable/injectable.dart';
-import 'package:rxdart/subjects.dart';
 
 import '../../../models/observe.dart';
-import '../../internal/user/user/current_user_service.dart';
+import '../../internal/current_user/metadata_service.dart';
 
 abstract class UserMetadataService {
   Observe<int?> get createdAt;
@@ -41,42 +40,25 @@ abstract class UserMetadataService {
 
 @Singleton(as: UserMetadataService)
 class UserMetadataServiceImpl implements UserMetadataService {
-  final CurrentUserService _currentUser;
+  final CurrentUserMetadataService _metadata;
 
-  UserMetadataServiceImpl(this._currentUser);
-
-  final _createdAtSubject = BehaviorSubject<int?>.seeded(null);
-  final _updatedAtSubject = BehaviorSubject<int?>.seeded(null);
-  final _lastSignInTimeSubject = BehaviorSubject<int?>.seeded(null);
+  UserMetadataServiceImpl(this._metadata);
 
   @override
-  Observe<int?> get createdAt => Observe<int?>(value: _createdAtSubject.value, stream: _createdAtSubject.stream);
+  Observe<int?> get createdAt => Observe<int?>(
+    value: _metadata.data.value?.createdAt,
+    stream: _metadata.data.stream.map((data) => data?.createdAt),
+  );
 
   @override
-  Observe<int?> get updatedAt => Observe<int?>(value: _updatedAtSubject.value, stream: _updatedAtSubject.stream);
+  Observe<int?> get updatedAt => Observe<int?>(
+    value: _metadata.data.value?.updatedAt,
+    stream: _metadata.data.stream.map((data) => data?.updatedAt),
+  );
 
   @override
-  Observe<int?> get lastSignInTime =>
-      Observe<int?>(value: _lastSignInTimeSubject.value, stream: _lastSignInTimeSubject.stream);
-
-  @PostConstruct()
-  init() {
-    listenToMetadata();
-  }
-}
-
-extension on UserMetadataServiceImpl {
-  void listenToMetadata() {
-    _currentUser.data.stream
-        .map((user) => user?.metadata)
-        .distinct((prev, next) {
-          if (prev?.updatedAt == next?.updatedAt) return true;
-          return false;
-        })
-        .listen((metadata) {
-          _createdAtSubject.value = metadata?.createdAt;
-          _updatedAtSubject.value = metadata?.updatedAt;
-          _lastSignInTimeSubject.value = metadata?.lastSignInTime;
-        });
-  }
+  Observe<int?> get lastSignInTime => Observe<int?>(
+    value: _metadata.data.value?.lastSignInTime,
+    stream: _metadata.data.stream.map((data) => data?.lastSignInTime),
+  );
 }

@@ -28,10 +28,9 @@
 // in legal action.
 
 import 'package:injectable/injectable.dart';
-import 'package:rxdart/subjects.dart';
 
 import '../../../models/observe.dart';
-import '../../internal/user/user/current_user_service.dart';
+import '../../internal/current_user/data_service.dart';
 
 abstract class UserDataService {
   Observe<Map<String, dynamic>?> get custom;
@@ -39,30 +38,11 @@ abstract class UserDataService {
 
 @Singleton(as: UserDataService)
 class UserDataServiceImpl implements UserDataService {
-  final CurrentUserService _currentUser;
+  final CurrentUserDataService _currentUserData;
 
-  UserDataServiceImpl(this._currentUser);
-
-  final _dataSubject = BehaviorSubject<Map<String, dynamic>?>.seeded(null);
+  UserDataServiceImpl(this._currentUserData);
 
   @override
   Observe<Map<String, dynamic>?> get custom =>
-      Observe<Map<String, dynamic>?>(value: _dataSubject.value, stream: _dataSubject.stream);
-
-  @PostConstruct()
-  init() {
-    listenToUserData();
-  }
-}
-
-extension on UserDataServiceImpl {
-  void listenToUserData() {
-    _currentUser.data.stream
-        .map((data) => data?.data)
-        .distinct((prev, next) {
-          if (prev == next) return true;
-          return false;
-        })
-        .listen((data) => _dataSubject.value = data);
-  }
+      Observe<Map<String, dynamic>?>(value: _currentUserData.data.value, stream: _currentUserData.data.stream);
 }

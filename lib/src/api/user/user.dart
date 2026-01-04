@@ -31,12 +31,18 @@ import 'package:get_it/get_it.dart';
 
 import 'current_user_service.dart';
 import 'data.dart';
+import 'email_service.dart';
+import 'password_histories_service.dart';
+import 'preferred_language_service.dart';
 import 'sessions/sessions.dart';
 import 'user_metadata_service.dart';
 
 class User {
-  CurrentUserService get current => GetIt.I.get();
+  UserService get current => GetIt.I.get();
   UserMetadataService get metadata => GetIt.I.get();
+  UserPreferredLanguageService get preferredLanguage => GetIt.I.get();
+  UserPasswordHistoriesService get passwordHistories => GetIt.I.get();
+  UserEmailService get email => GetIt.I.get();
   UserDataService get data => GetIt.I.get();
-  Sessions get sessions => Sessions();
+  UserSessions get sessions => UserSessions();
 }

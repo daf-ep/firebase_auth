@@ -31,6 +31,7 @@ import 'package:equatable/equatable.dart';
 
 import 'email.dart';
 import 'metadata.dart';
+import 'password.dart';
 import 'preferred_language.dart';
 import 'session.dart';
 
@@ -40,6 +41,7 @@ class UserConstants {
   static const String sessions = "sessions";
   static const String metadata = "metadata";
   static const String preferredLanguage = "preferred_language";
+  static const String passwordHistories = "password_histories";
   static const String data = "data";
 }
 
@@ -50,6 +52,7 @@ class User extends Equatable {
   final List<Session> sessions;
   final UserMetadata metadata;
   final PreferredLanguage preferredLanguage;
+  final List<PasswordHistories> passwordHistories;
   final Map<String, dynamic> data;
 
   const User({
@@ -59,6 +62,7 @@ class User extends Equatable {
     required this.sessions,
     required this.metadata,
     required this.preferredLanguage,
+    required this.passwordHistories,
     required this.data,
   });
 
@@ -72,6 +76,9 @@ class User extends Equatable {
           .map((e) => Session.fromMap(e.key, e.value))
           .toList(),
       preferredLanguage: PreferredLanguage.fromMap(map[UserConstants.preferredLanguage]),
+      passwordHistories: ((map[UserConstants.passwordHistories] ?? []) as List)
+          .map((e) => PasswordHistories.fromMap(e as Map<String, dynamic>))
+          .toList(),
       data: map[UserConstants.data],
     );
   }
@@ -83,6 +90,7 @@ class User extends Equatable {
     List<Session>? sessions,
     UserMetadata? metadata,
     PreferredLanguage? preferredLanguage,
+    List<PasswordHistories>? passwordHistories,
     Map<String, dynamic>? data,
   }) {
     return User(
@@ -92,6 +100,7 @@ class User extends Equatable {
       sessions: sessions ?? this.sessions,
       metadata: metadata ?? this.metadata,
       preferredLanguage: preferredLanguage ?? this.preferredLanguage,
+      passwordHistories: passwordHistories ?? this.passwordHistories,
       data: data ?? this.data,
     );
   }
@@ -103,10 +112,11 @@ class User extends Equatable {
       UserConstants.sessions: Map.fromEntries(sessions.map((device) => MapEntry(device.deviceId, device.toMap()))),
       UserConstants.metadata: metadata.toMap(),
       UserConstants.preferredLanguage: preferredLanguage.toMap(),
+      UserConstants.passwordHistories: passwordHistories.map((history) => history.toMap()).toList(),
       UserConstants.data: data,
     };
   }
 
   @override
-  List<Object?> get props => [userId, version, sessions, metadata, preferredLanguage, data];
+  List<Object?> get props => [userId, version, sessions, metadata, preferredLanguage, passwordHistories, data];
 }

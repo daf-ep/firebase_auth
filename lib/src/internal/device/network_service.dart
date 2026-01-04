@@ -73,14 +73,17 @@ class NetworkServiceImpl implements NetworkService {
   @override
   Stream<bool> get isReachableStream => _isReachableSubject.stream;
 
-  @PostConstruct()
-  init() async {
-    listenToReachable();
+  @PostConstruct(preResolve: true)
+  Future<void> init() async {
+    await listenToReachable();
   }
 }
 
 extension on NetworkServiceImpl {
-  void listenToReachable() {
+  Future<void> listenToReachable() async {
+    final internetStatus = await InternetConnection().internetStatus;
+    _isReachableSubject.value = internetStatus == InternetStatus.connected;
+
     InternetConnection().onStatusChange.distinct().listen((isReachable) {
       _isReachableSubject.value = isReachable == InternetStatus.connected;
     });

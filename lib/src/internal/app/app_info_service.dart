@@ -62,7 +62,7 @@ abstract class AppInfoService {
   Stream<String> get nameStream;
 }
 
-@Singleton(as: AppInfoService)
+@Singleton(as: AppInfoService, order: -1)
 class AppInfoServiceImpl implements AppInfoService {
   final _appNameSubject = BehaviorSubject<String>.seeded("");
 
@@ -72,9 +72,9 @@ class AppInfoServiceImpl implements AppInfoService {
   @override
   Stream<String> get nameStream => _appNameSubject.stream;
 
-  @PostConstruct()
-  void init() {
-    getApplicationInfo();
+  @PostConstruct(preResolve: true)
+  Future<void> init() async {
+    await getApplicationInfo();
   }
 }
 

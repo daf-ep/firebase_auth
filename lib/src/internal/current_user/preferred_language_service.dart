@@ -27,44 +27,34 @@
 // is a violation of applicable intellectual property laws and will result
 // in legal action.
 
-import 'package:flutter/foundation.dart';
 import 'package:injectable/injectable.dart';
 
-import '../../../../models/observe.dart';
-import '../../auth/auth.dart';
-import 'local_service.dart';
-import 'remote_service.dart';
+import '../../../models/observe.dart';
+import '../../../models/user/language.dart';
+import '../../../models/user/preferred_language.dart';
+import 'helpers/current_user_helper_service.dart';
 
-@internal
-abstract class VersionService {
-  Observe<int?> get local;
+abstract class CurrentUserPreferredLanguageService {
+  Observe<Language?> get current;
 
-  Observe<int?> get remote;
-
-  Future<void> upgrade();
+  Observe<List<PreferredLanguageHistory>?> get histories;
 }
 
-@Singleton(as: VersionService)
-class VersionServiceImpl implements VersionService {
-  final LocalVersionService _local;
-  final RemoteVersionService _remote;
+@Singleton(as: CurrentUserPreferredLanguageService)
+class CurrentUserPreferredLanguageServiceImpl implements CurrentUserPreferredLanguageService {
+  final CurrentUserHelperService _helper;
 
-  VersionServiceImpl(this._local, this._remote);
-
-  @override
-  Observe<int?> get local => _local.version;
+  CurrentUserPreferredLanguageServiceImpl(this._helper);
 
   @override
-  Observe<int?> get remote => _remote.version;
+  Observe<Language?> get current => Observe<Language?>(
+    value: _helper.data.value?.preferredLanguage.current,
+    stream: _helper.data.stream.map((user) => user?.preferredLanguage.current),
+  );
 
   @override
-  Future<void> upgrade() async {
-    final userId = AuthServices.user.userId.value;
-    if (userId == null) return;
-
-    await _local.upgrade();
-    await _remote.upgrade();
-
-    return;
-  }
+  Observe<List<PreferredLanguageHistory>?> get histories => Observe<List<PreferredLanguageHistory>?>(
+    value: _helper.data.value?.preferredLanguage.histories,
+    stream: _helper.data.stream.map((user) => user?.preferredLanguage.histories),
+  );
 }

@@ -28,29 +28,16 @@
 // in legal action.
 
 import 'package:injectable/injectable.dart';
+import 'package:rxdart/subjects.dart';
 
-import '../user.dart';
-import 'local_service.dart';
-import 'remote_service.dart';
+abstract class UsersService {}
 
-abstract class UserMetadataService {
-  Future<void> update({int? lastSignInTime});
+@Singleton(as: UsersService)
+class UsersServiceImpl implements UsersService {
+  final _subject = BehaviorSubject<bool>.seeded(false);
+
+  @PostConstruct()
+  init() async {}
 }
 
-@Singleton(as: UserMetadataService)
-class UserMetadataServiceImpl implements UserMetadataService {
-  final LocalUserMetadataService _local;
-  final RemoteUserMetadataService _remote;
-
-  UserMetadataServiceImpl(this._local, this._remote);
-
-  @override
-  Future<void> update({int? lastSignInTime}) async {
-    await _local.update(lastSignInTime: lastSignInTime);
-    await _remote.update(lastSignInTime: lastSignInTime);
-
-    await UserServices.version.upgrade();
-
-    return;
-  }
-}
+extension on UsersServiceImpl {}

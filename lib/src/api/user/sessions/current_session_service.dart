@@ -27,21 +27,17 @@
 // is a violation of applicable intellectual property laws and will result
 // in legal action.
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:injectable/injectable.dart';
-import 'package:rxdart/subjects.dart';
 
-import '../../../../extensions/language.dart';
 import '../../../../models/observe.dart';
 import '../../../../models/user/language.dart';
 import '../../../../models/user/session.dart';
+import '../../../internal/current_user/sessions_service.dart';
 import '../../../internal/device/device_info_service.dart';
-import '../../../internal/settings/preferences_service.dart';
-import '../../../internal/user/sessions/sessions_service.dart';
-import '../../../internal/user/user/current_user_service.dart';
+import 'all_sessions_service.dart';
 
-abstract class CurrentSessionService {
+abstract class UserSessionService {
   Observe<Session?> get session;
 
   Future<void> language(Language language);
@@ -49,61 +45,25 @@ abstract class CurrentSessionService {
   Future<void> themeMode(ThemeMode themeMode);
 }
 
-@Singleton(as: CurrentSessionService)
-class CurrentSessionServiceImpl implements CurrentSessionService {
+@Singleton(as: UserSessionService)
+class UserSessionServiceImpl implements UserSessionService {
+  final UserAllSessionsService _allSessions;
   final DeviceInfoService _deviceInfo;
-  final CurrentUserService _currentUser;
-  final SessionsService _sessions;
-  final PreferencesService _preferences;
+  final CurrentSessionsService _currentSessions;
 
-  CurrentSessionServiceImpl(this._deviceInfo, this._currentUser, this._sessions, this._preferences);
-
-  final _sessionSubject = BehaviorSubject<Session?>.seeded(null);
+  UserSessionServiceImpl(this._allSessions, this._deviceInfo, this._currentSessions);
 
   @override
-  Observe<Session?> get session => Observe<Session?>(value: _sessionSubject.value, stream: _sessionSubject.stream);
+  Observe<Session?> get session => Observe<Session?>(
+    value: _allSessions.sessions.value?.where((s) => s.deviceId == _deviceInfo.identifier).firstOrNull,
+    stream: _allSessions.sessions.stream.map(
+      (sessions) => sessions?.where((s) => s.deviceId == _deviceInfo.identifier).firstOrNull,
+    ),
+  );
 
   @override
-  Future<void> language(Language language) async {
-    final userId = _currentUser.data.value?.userId;
-    if (userId == null) return;
-
-    await _preferences.locale.set(language.convert().languageCode);
-    await _sessions.update(language: language);
-  }
+  Future<void> language(Language language) => _currentSessions.update(language: language);
 
   @override
-  Future<void> themeMode(ThemeMode themeMode) async {
-    final userId = _currentUser.data.value?.userId;
-    if (userId == null) return;
-
-    await _preferences.themeMode.set(themeMode);
-    await _sessions.update(themeMode: themeMode);
-  }
-
-  @PostConstruct()
-  init() {
-    listenToCurrentSession();
-  }
-}
-
-extension on CurrentSessionServiceImpl {
-  void listenToCurrentSession() {
-    _currentUser.data.stream
-        .distinct((prev, next) {
-          if (mapEquals(
-            prev?.sessions.where((session) => session.deviceId == _deviceInfo.identifier).firstOrNull?.toMap() ?? {},
-            next?.sessions.where((session) => session.deviceId == _deviceInfo.identifier).firstOrNull?.toMap() ?? {},
-          )) {
-            return true;
-          }
-          return false;
-        })
-        .listen((user) {
-          final deviceId = _deviceInfo.identifier;
-          final sessions = user?.sessions;
-
-          _sessionSubject.value = sessions?.where((session) => session.deviceId == deviceId).firstOrNull;
-        });
-  }
+  Future<void> themeMode(ThemeMode themeMode) => _currentSessions.update(themeMode: themeMode);
 }

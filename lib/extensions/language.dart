@@ -69,4 +69,6 @@ extension LanguageLocaleExtension on Language {
     Language.ukrainian => const Locale('uk'),
     Language.vietnamese => const Locale('vi'),
   };
+
+  String get languageCode => convert().languageCode;
 }

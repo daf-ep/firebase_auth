@@ -29,49 +29,23 @@
 
 import 'package:injectable/injectable.dart';
 
-import '../../../helpers/database.dart';
-import '../../../models/user/user.dart';
+import '../../../models/observe.dart';
+import '../../../models/user/password.dart';
+import '../../internal/current_user/password_histories.dart';
 
-abstract class UsersService {
-  Future<String?> getUserId(String email);
-
-  Future<User?> getUser(String userId);
+abstract class UserPasswordHistoriesService {
+  Observe<List<PasswordHistories>?> get histories;
 }
 
-@Singleton(as: UsersService)
-class UsersServiceImpl implements UsersService {
-  @override
-  Future<String?> getUserId(String email) async {
-    final snapshot = await DatabaseNodes.emails(email).get();
-    final raw = snapshot.value;
-    if (raw is! String) return null;
+@Singleton(as: UserPasswordHistoriesService)
+class UserPasswordHistoriesServiceImpl implements UserPasswordHistoriesService {
+  final CurrentUserPasswordHistoriesService _currentUserPasswordHistoriesService;
 
-    return raw;
-  }
+  UserPasswordHistoriesServiceImpl(this._currentUserPasswordHistoriesService);
 
   @override
-  Future<User?> getUser(String userId) async {
-    final snapshot = await DatabaseNodes.users(userId).get();
-    final raw = snapshot.value;
-    if (raw is! Map) return null;
-
-    final map = raw.entries.fold<Map<String, dynamic>>({}, (map, entry) {
-      final key = entry.key.toString();
-      final value = _cast(entry.value);
-      map[key] = value;
-      return map;
-    });
-    return User.fromMap(userId, map);
-  }
-}
-
-extension on UsersServiceImpl {
-  dynamic _cast(dynamic value) {
-    if (value is Map) {
-      return value.map((key, val) => MapEntry(key.toString(), _cast(val)));
-    } else if (value is List) {
-      return value.map(_cast).toList();
-    }
-    return value;
-  }
+  Observe<List<PasswordHistories>?> get histories => Observe<List<PasswordHistories>?>(
+    value: _currentUserPasswordHistoriesService.data.value,
+    stream: _currentUserPasswordHistoriesService.data.stream,
+  );
 }

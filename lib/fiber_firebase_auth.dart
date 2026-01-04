@@ -38,6 +38,7 @@ import 'src/api/auth/forgot_password.dart';
 import 'src/api/auth/sign_in_service.dart';
 import 'src/api/auth/sign_up_service.dart';
 import 'src/api/user/user.dart';
+import 'src/api/users_service.dart';
 import 'src/internal/local/local_storage.dart';
 
 export './models/auth/credentials.dart';
@@ -65,4 +66,5 @@ class FiberAuth {
   static SignInService get signIn => GetIt.I.get();
   static ForgotPasswordService get forgotPassword => GetIt.I.get();
   static User get user => User();
+  static UsersService get users => GetIt.I.get();
 }

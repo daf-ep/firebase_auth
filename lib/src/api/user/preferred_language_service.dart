@@ -29,49 +29,32 @@
 
 import 'package:injectable/injectable.dart';
 
-import '../../../helpers/database.dart';
-import '../../../models/user/user.dart';
+import '../../../models/observe.dart';
+import '../../../models/user/language.dart';
+import '../../../models/user/preferred_language.dart';
+import '../../internal/current_user/preferred_language_service.dart';
 
-abstract class UsersService {
-  Future<String?> getUserId(String email);
+abstract class UserPreferredLanguageService {
+  Observe<Language?> get current;
 
-  Future<User?> getUser(String userId);
+  Observe<List<PreferredLanguageHistory>?> get histories;
 }
 
-@Singleton(as: UsersService)
-class UsersServiceImpl implements UsersService {
-  @override
-  Future<String?> getUserId(String email) async {
-    final snapshot = await DatabaseNodes.emails(email).get();
-    final raw = snapshot.value;
-    if (raw is! String) return null;
+@Singleton(as: UserPreferredLanguageService)
+class UserPreferredLanguageServiceImpl implements UserPreferredLanguageService {
+  final CurrentUserPreferredLanguageService _currentUserPreferredLanguage;
 
-    return raw;
-  }
+  UserPreferredLanguageServiceImpl(this._currentUserPreferredLanguage);
 
   @override
-  Future<User?> getUser(String userId) async {
-    final snapshot = await DatabaseNodes.users(userId).get();
-    final raw = snapshot.value;
-    if (raw is! Map) return null;
+  Observe<Language?> get current => Observe<Language?>(
+    value: _currentUserPreferredLanguage.current.value,
+    stream: _currentUserPreferredLanguage.current.stream,
+  );
 
-    final map = raw.entries.fold<Map<String, dynamic>>({}, (map, entry) {
-      final key = entry.key.toString();
-      final value = _cast(entry.value);
-      map[key] = value;
-      return map;
-    });
-    return User.fromMap(userId, map);
-  }
-}
-
-extension on UsersServiceImpl {
-  dynamic _cast(dynamic value) {
-    if (value is Map) {
-      return value.map((key, val) => MapEntry(key.toString(), _cast(val)));
-    } else if (value is List) {
-      return value.map(_cast).toList();
-    }
-    return value;
-  }
+  @override
+  Observe<List<PreferredLanguageHistory>?> get histories => Observe<List<PreferredLanguageHistory>?>(
+    value: _currentUserPreferredLanguage.histories.value,
+    stream: _currentUserPreferredLanguage.histories.stream,
+  );
 }

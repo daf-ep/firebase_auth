@@ -28,51 +28,35 @@
 // in legal action.
 
 import 'package:injectable/injectable.dart';
-import 'package:rxdart/subjects.dart';
 
 import '../../../models/observe.dart';
 import '../../internal/auth/user_service.dart';
+import '../../internal/current_user/current_user_service.dart';
 
-abstract class CurrentUserService {
+abstract class UserService {
   Observe<bool> get isUserConnected;
   Observe<String?> get userId;
   Future<void> signOut();
+  Future<void> delete();
 }
 
-@Singleton(as: CurrentUserService)
-class CurrentUserServiceImpl implements CurrentUserService {
+@Singleton(as: UserService)
+class UserServiceImpl implements UserService {
   final AuthUserService _authUser;
+  final CurrentUserService _currentUser;
 
-  CurrentUserServiceImpl(this._authUser);
-
-  final _isUserConnectedSubject = BehaviorSubject<bool>.seeded(false);
-  final _userIdSubject = BehaviorSubject<String?>.seeded(null);
+  UserServiceImpl(this._authUser, this._currentUser);
 
   @override
   Observe<bool> get isUserConnected =>
-      Observe<bool>(value: _isUserConnectedSubject.value, stream: _isUserConnectedSubject.stream);
+      Observe<bool>(value: _authUser.isUserConnected.value, stream: _authUser.isUserConnected.stream);
 
   @override
-  Observe<String?> get userId => Observe<String?>(value: _userIdSubject.value, stream: _userIdSubject.stream);
+  Observe<String?> get userId => Observe<String?>(value: _authUser.userId.value, stream: _authUser.userId.stream);
 
   @override
   Future<void> signOut() => _authUser.signOut();
 
-  @PostConstruct()
-  init() {
-    listenToUserConnected();
-    listenToUserId();
-  }
-}
-
-extension on CurrentUserServiceImpl {
-  void listenToUserConnected() {
-    _authUser.isUserConnected.stream.distinct().listen(
-      (isUserConnected) => _isUserConnectedSubject.value = isUserConnected,
-    );
-  }
-
-  void listenToUserId() {
-    _authUser.userId.stream.distinct().listen((userId) => _userIdSubject.value = userId);
-  }
+  @override
+  Future<void> delete() => _currentUser.delete();
 }

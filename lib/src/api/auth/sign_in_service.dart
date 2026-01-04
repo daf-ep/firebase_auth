@@ -43,10 +43,10 @@ import '../../../results/auth.dart';
 import '../../../results/sign_in.dart';
 import '../../internal/auth/rate_limite/rate_limite_service.dart';
 import '../../internal/auth/sign_in_service.dart';
+import '../../internal/current_user/metadata_service.dart';
+import '../../internal/current_user/sessions_service.dart';
 import '../../internal/device/device_info_service.dart';
 import '../../internal/device/network_service.dart';
-import '../../internal/user/metadata/metadata_service.dart';
-import '../../internal/user/sessions/sessions_service.dart';
 import '../../internal/users/sessions_service.dart';
 import '../../internal/users/users_service.dart';
 
@@ -62,9 +62,9 @@ class SignInServiceImpl implements SignInService {
   final DeviceInfoService _deviceInfo;
   final NetworkService _network;
   final RateLimiteService _rateLimite;
-  final SessionsService _userSessions;
+  final CurrentSessionsService _userSessions;
   final AuthSignInService _authSignIn;
-  final UserMetadataService _userMetadata;
+  final CurrentUserMetadataService _userMetadata;
   final UsersSessionsService _usersSessions;
   final UsersService _users;
 
@@ -118,7 +118,7 @@ class SignInServiceImpl implements SignInService {
     }
 
     final signInWithEmailAndPasswordResult = await _authSignIn.signInWithEmailAndPassword(email, password);
-    await _userSessions.update(isSignedIn: true, lastSignInTime: DateTime.now().millisecondsSinceEpoch);
+    await _userSessions.update(lastSignInTime: DateTime.now().millisecondsSinceEpoch);
     await _userMetadata.update(lastSignInTime: DateTime.now().millisecondsSinceEpoch);
 
     return switch (signInWithEmailAndPasswordResult) {

@@ -30,60 +30,33 @@
 import 'package:flutter/foundation.dart';
 import 'package:injectable/injectable.dart';
 
-import '../../../../helpers/database.dart';
-import '../../../../models/user/user.dart';
-import '../../auth/user_service.dart';
+import '../../../fiber_firebase_auth.dart';
+import '../../../models/observe.dart';
+import 'helpers/current_user_helper_service.dart';
 
 @internal
-abstract class RemoteCurrentUserService {
-  Future<void> add(User user);
-  Future<void> delete(String userId);
-  Future<User?> getUser(String userId);
+abstract class CurrentUserMetadataService {
+  Observe<UserMetadata?> get data;
+
+  Future<void> update({int? updatedAt, int? lastSignInTime});
 }
 
-@Singleton(as: RemoteCurrentUserService)
-class RemoteCurrentUserServiceImpl implements RemoteCurrentUserService {
-  final AuthUserService _authUser;
+@Singleton(as: CurrentUserMetadataService)
+class CurrentUserMetadataServiceImpl implements CurrentUserMetadataService {
+  final CurrentUserHelperService _helper;
 
-  RemoteCurrentUserServiceImpl(this._authUser);
-
-  @override
-  Future<void> add(User user) => DatabaseNodes.users(user.userId).set(user.toMap());
+  CurrentUserMetadataServiceImpl(this._helper);
 
   @override
-  Future<void> delete(String userId) async {
-    final userId = _authUser.userId.value;
-    if (userId == null) return;
-
-    await DatabaseNodes.users(userId).remove();
-  }
+  Observe<UserMetadata?> get data => Observe<UserMetadata?>(
+    value: _helper.data.value?.metadata,
+    stream: _helper.data.stream.map((data) => data?.metadata),
+  );
 
   @override
-  Future<User?> getUser(String userId) async {
-    final userId = _authUser.userId.value;
-    if (userId == null) return null;
-
-    final snapshot = await DatabaseNodes.users(userId).get();
-    final raw = snapshot.value;
-    if (raw is! Map) return null;
-
-    final map = raw.entries.fold<Map<String, dynamic>>({}, (map, entry) {
-      final key = entry.key.toString();
-      final value = _cast(entry.value);
-      map[key] = value;
-      return map;
-    });
-    return User.fromMap(userId, map);
-  }
-}
-
-extension on RemoteCurrentUserServiceImpl {
-  dynamic _cast(dynamic value) {
-    if (value is Map) {
-      return value.map((key, val) => MapEntry(key.toString(), _cast(val)));
-    } else if (value is List) {
-      return value.map(_cast).toList();
-    }
-    return value;
-  }
+  Future<void> update({int? updatedAt, int? lastSignInTime}) => _helper.update(
+    (user) => user?.copyWith(
+      metadata: user.metadata.copyWith(updatedAt: updatedAt, lastSignInTime: lastSignInTime),
+    ),
+  );
 }

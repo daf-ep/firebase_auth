@@ -27,16 +27,25 @@
 // is a violation of applicable intellectual property laws and will result
 // in legal action.
 
-import 'package:flutter/foundation.dart';
-import 'package:get_it/get_it.dart';
+import 'package:injectable/injectable.dart';
 
-import 'sessions/sessions_service.dart';
-import 'user/current_user_service.dart';
-import 'version/version_service.dart';
+import '../../../models/observe.dart';
+import '../../../models/user/password.dart';
+import 'helpers/current_user_helper_service.dart';
 
-@internal
-class UserServices {
-  static CurrentUserService get current => GetIt.I.get();
-  static VersionService get version => GetIt.I.get();
-  static SessionsService get sessions => GetIt.I.get();
+abstract class CurrentUserPasswordHistoriesService {
+  Observe<List<PasswordHistories>?> get data;
+}
+
+@Singleton(as: CurrentUserPasswordHistoriesService)
+class CurrentUserPasswordHistoriesServiceImpl implements CurrentUserPasswordHistoriesService {
+  final CurrentUserHelperService _helper;
+
+  CurrentUserPasswordHistoriesServiceImpl(this._helper);
+
+  @override
+  Observe<List<PasswordHistories>?> get data => Observe<List<PasswordHistories>?>(
+    value: _helper.data.value?.passwordHistories,
+    stream: _helper.data.stream.map((user) => user?.passwordHistories),
+  );
 }

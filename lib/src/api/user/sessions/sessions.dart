@@ -32,7 +32,7 @@ import 'package:get_it/get_it.dart';
 import 'all_sessions_service.dart';
 import 'current_session_service.dart';
 
-class Sessions {
-  AllSessionsService get all => GetIt.I.get();
-  CurrentSessionService get current => GetIt.I.get();
+class UserSessions {
+  UserAllSessionsService get all => GetIt.I.get();
+  UserSessionService get current => GetIt.I.get();
 }

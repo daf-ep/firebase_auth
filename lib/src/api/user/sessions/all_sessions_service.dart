@@ -27,48 +27,28 @@
 // is a violation of applicable intellectual property laws and will result
 // in legal action.
 
-import 'package:flutter/foundation.dart';
 import 'package:injectable/injectable.dart';
-import 'package:rxdart/subjects.dart';
 
 import '../../../../models/observe.dart';
 import '../../../../models/user/session.dart';
-import '../../../internal/user/user/current_user_service.dart';
+import '../../../internal/current_user/sessions_service.dart';
 
-abstract class AllSessionsService {
+abstract class UserAllSessionsService {
   Observe<List<Session>?> get sessions;
+
+  Future<void> delete(String deviceId);
 }
 
-@Singleton(as: AllSessionsService)
-class AllSessionsServiceImpl implements AllSessionsService {
-  final CurrentUserService _currentUser;
+@Singleton(as: UserAllSessionsService)
+class UserAllSessionsServiceImpl implements UserAllSessionsService {
+  final CurrentSessionsService _currentSessions;
 
-  AllSessionsServiceImpl(this._currentUser);
-
-  final _sessionsSubject = BehaviorSubject<List<Session>?>.seeded(null);
+  UserAllSessionsServiceImpl(this._currentSessions);
 
   @override
   Observe<List<Session>?> get sessions =>
-      Observe<List<Session>?>(value: _sessionsSubject.value, stream: _sessionsSubject.stream);
+      Observe<List<Session>?>(value: _currentSessions.sessions.value, stream: _currentSessions.sessions.stream);
 
-  @PostConstruct()
-  init() {
-    listenToSessions();
-  }
-}
-
-extension on AllSessionsServiceImpl {
-  void listenToSessions() {
-    _currentUser.data.stream
-        .distinct((prev, next) {
-          if (listEquals(
-            prev?.sessions.map((session) => session.toMap()).toList() ?? [],
-            next?.sessions.map((session) => session.toMap()).toList() ?? [],
-          )) {
-            return true;
-          }
-          return false;
-        })
-        .listen((user) => _sessionsSubject.value = user?.sessions);
-  }
+  @override
+  Future<void> delete(String deviceId) => _currentSessions.delete(deviceId);
 }
