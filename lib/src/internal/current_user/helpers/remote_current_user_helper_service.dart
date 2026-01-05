@@ -42,14 +42,11 @@ import '../../../../models/user/user.dart';
 import '../../../../models/user/version.dart';
 import '../../auth/user_service.dart';
 import '../../device/device_info_service.dart';
-import '../../users/users_service.dart';
 import 'local_current_user_helper_service.dart';
 
 @internal
 abstract class RemoteCurrentUserHelperService {
   Future<void> add(User user);
-
-  Future<User?> get();
 
   Future<void> update(Future<User?> Function(User?) copyWith);
 
@@ -64,10 +61,9 @@ abstract class RemoteCurrentUserHelperService {
 class RemoteCurrentUserHelperServiceImpl implements RemoteCurrentUserHelperService {
   final AuthUserService _authUser;
   final DeviceInfoService _deviceInfo;
-  final RemoteUsersService _users;
   final LocalCurrentUserHelperService _local;
 
-  RemoteCurrentUserHelperServiceImpl(this._authUser, this._deviceInfo, this._users, this._local);
+  RemoteCurrentUserHelperServiceImpl(this._authUser, this._deviceInfo, this._local);
 
   final _versionsSubject = BehaviorSubject<Versions?>.seeded(null);
   final _connectedDevicesSubject = BehaviorSubject<List<String>?>.seeded(null);
@@ -81,14 +77,6 @@ class RemoteCurrentUserHelperServiceImpl implements RemoteCurrentUserHelperServi
 
   @override
   Future<void> add(User user) => DatabaseNodes.users(user.userId).set(user.toMap());
-
-  @override
-  Future<User?> get() async {
-    final userId = _authUser.userId.value;
-    if (userId == null) return null;
-
-    return _users.user(userId);
-  }
 
   @override
   Future<void> update(Future<User?> Function(User?) copyWith) async {

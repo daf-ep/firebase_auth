@@ -54,8 +54,6 @@ abstract class CurrentUserHelperService {
 
   Future<void> add(User user);
 
-  Future<User?> get();
-
   Future<void> update(Future<User?> Function(User?) copyWith);
 
   Future<void> delete();
@@ -89,9 +87,6 @@ class CurrentUserHelperServiceImpl implements CurrentUserHelperService {
     await _local.add(user);
     await _remote.add(user);
   }
-
-  @override
-  Future<User?> get() => _remote.get();
 
   @override
   Future<void> update(Future<User?> Function(User?) copyWith) async {
@@ -222,6 +217,7 @@ extension on CurrentUserHelperServiceImpl {
   bool _needsSync(Versions local, Versions remote) {
     return remote.data > local.data ||
         remote.email > local.email ||
+        remote.avatar > local.avatar ||
         remote.metadata > local.metadata ||
         remote.preferredLanguage > local.preferredLanguage ||
         remote.sessions > local.sessions ||
@@ -279,6 +275,10 @@ extension on CurrentUserHelperServiceImpl {
               final sessions = await _users.getSessions(userId);
               updated = updated.copyWith(sessions: sessions);
 
+            case UserConstants.avatar:
+              final avatar = await _users.getAvatar(userId);
+              updated = updated.copyWith(avatar: () => avatar);
+
             case UserConstants.passwordHistories:
               final histories = await _users.getPasswordHistories(userId);
               updated = updated.copyWith(passwordHistories: histories);
@@ -302,6 +302,7 @@ extension on CurrentUserHelperServiceImpl {
       nodes.add(UserConstants.preferredLanguage);
     }
     if (remote.sessions > local.sessions) nodes.add(UserConstants.sessions);
+    if (remote.avatar > local.avatar) nodes.add(UserConstants.avatar);
     if (remote.passwordHistories > local.passwordHistories) {
       nodes.add(UserConstants.passwordHistories);
     }

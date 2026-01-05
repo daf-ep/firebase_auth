@@ -150,9 +150,11 @@ extension GetItInjectableX on _i174.GetIt {
       () => _i42.RemoteCurrentUserHelperServiceImpl(
         gh<_i114.AuthUserService>(),
         gh<_i348.DeviceInfoService>(),
-        gh<_i838.RemoteUsersService>(),
         gh<_i1044.LocalCurrentUserHelperService>(),
       )..init(),
+    );
+    gh.singleton<_i521.AuthSignInService>(
+      () => _i521.AuthSignInServiceImpl(gh<_i348.DeviceInfoService>()),
     );
     gh.singleton<_i201.CurrentUserHelperService>(
       () => _i201.CurrentUserHelperServiceImpl(
@@ -168,9 +170,6 @@ extension GetItInjectableX on _i174.GetIt {
         gh<_i201.CurrentUserHelperService>(),
         gh<_i114.AuthUserService>(),
       ),
-    );
-    gh.singleton<_i521.AuthSignInService>(
-      () => _i521.AuthSignInServiceImpl(gh<_i348.DeviceInfoService>()),
     );
     gh.singleton<_i1062.UserService>(
       () => _i1062.UserServiceImpl(
