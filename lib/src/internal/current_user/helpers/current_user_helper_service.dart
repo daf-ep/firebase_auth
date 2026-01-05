@@ -34,14 +34,16 @@ import 'package:rxdart/subjects.dart';
 
 import '../../../../models/observe.dart';
 import '../../../../models/user/user.dart';
+import '../../../../models/user/version.dart';
 import '../../auth/user_service.dart';
 import '../../device/device_info_service.dart';
+import '../../users/users_service.dart';
 import 'local_current_user_helper_service.dart';
 import 'remote_current_user_helper_service.dart';
 
 class Version {
-  final int? local;
-  final int? remote;
+  final Versions? local;
+  final Versions? remote;
 
   Version({required this.local, required this.remote});
 }
@@ -54,7 +56,7 @@ abstract class CurrentUserHelperService {
 
   Future<User?> get();
 
-  Future<void> update(User? Function(User?) copyWith);
+  Future<void> update(Future<User?> Function(User?) copyWith);
 
   Future<void> delete();
 
@@ -69,8 +71,9 @@ class CurrentUserHelperServiceImpl implements CurrentUserHelperService {
   final RemoteCurrentUserHelperService _remote;
   final DeviceInfoService _deviceInfo;
   final AuthUserService _authUser;
+  final RemoteUsersService _users;
 
-  CurrentUserHelperServiceImpl(this._local, this._remote, this._deviceInfo, this._authUser);
+  CurrentUserHelperServiceImpl(this._local, this._remote, this._deviceInfo, this._authUser, this._users);
 
   final _userSubject = BehaviorSubject<User?>.seeded(null);
   final _versionSubject = BehaviorSubject<Version>.seeded(Version(local: null, remote: null));
@@ -91,7 +94,7 @@ class CurrentUserHelperServiceImpl implements CurrentUserHelperService {
   Future<User?> get() => _remote.get();
 
   @override
-  Future<void> update(User? Function(User?) copyWith) async {
+  Future<void> update(Future<User?> Function(User?) copyWith) async {
     await _local.update(copyWith);
     await _remote.update(copyWith);
   }
@@ -180,21 +183,26 @@ extension on CurrentUserHelperServiceImpl {
 
   void listenToVersion() {
     CombineLatestStream.combine2(
-          _local.data.stream.map((data) => data?.version),
-          _remote.version.stream,
+          _local.data.stream.map((u) => u?.versions),
+          _remote.versions.stream,
           (local, remote) => Version(local: local, remote: remote),
         )
         .distinct((prev, next) {
+          if (identical(prev, next)) return true;
           if (prev.local == next.local && prev.remote == next.remote) return true;
           return false;
         })
-        .listen((version) => _versionSubject.value = version);
+        .listen((version) {
+          _versionSubject.value = version;
+        });
   }
 
   void listenToSync() {
     version.stream
         .distinct((prev, next) {
-          if (prev.local == next.local && prev.remote == next.remote) return true;
+          if (prev.local == next.local && prev.remote == next.remote) {
+            return true;
+          }
           return false;
         })
         .listen((version) {
@@ -202,12 +210,22 @@ extension on CurrentUserHelperServiceImpl {
           final remote = version.remote;
 
           if (local == null || remote == null) return;
+          if (_isSyncing) return;
 
-          final isNewVersionAvailable = remote > local;
-          if (isNewVersionAvailable == true && !_isSyncing) {
+          final needsSync = _needsSync(local, remote);
+          if (needsSync) {
             _sync();
           }
         });
+  }
+
+  bool _needsSync(Versions local, Versions remote) {
+    return remote.data > local.data ||
+        remote.email > local.email ||
+        remote.metadata > local.metadata ||
+        remote.preferredLanguage > local.preferredLanguage ||
+        remote.sessions > local.sessions ||
+        remote.passwordHistories > local.passwordHistories;
   }
 
   Future<void> _sync() async {
@@ -215,12 +233,79 @@ extension on CurrentUserHelperServiceImpl {
     _isSyncing = true;
 
     try {
-      final data = await get();
-      if (data == null) return;
+      final version = _versionSubject.value;
+      final local = version.local;
+      final remote = version.remote;
+      if (local == null || remote == null) return;
 
-      await _local.update((_) => data);
+      final userId = _authUser.userId.value;
+      if (userId == null) return;
+
+      final nodesToSync = _diffNodes(local, remote);
+      if (nodesToSync.isEmpty) return;
+
+      await _local.update((current) async {
+        if (current == null) return current;
+
+        var updated = current;
+
+        for (final node in nodesToSync) {
+          switch (node) {
+            case UserConstants.data:
+              final data = await _users.getData(userId);
+              if (data != null) {
+                updated = updated.copyWith(data: data);
+              }
+
+            case UserConstants.email:
+              final email = await _users.getEmail(userId);
+              if (email != null) {
+                updated = updated.copyWith(email: email);
+              }
+
+            case UserConstants.metadata:
+              final metadata = await _users.getMetadata(userId);
+              if (metadata != null) {
+                updated = updated.copyWith(metadata: metadata);
+              }
+
+            case UserConstants.preferredLanguage:
+              final lang = await _users.getPreferredLanguage(userId);
+              if (lang != null) {
+                updated = updated.copyWith(preferredLanguage: lang);
+              }
+
+            case UserConstants.sessions:
+              final sessions = await _users.getSessions(userId);
+              updated = updated.copyWith(sessions: sessions);
+
+            case UserConstants.passwordHistories:
+              final histories = await _users.getPasswordHistories(userId);
+              updated = updated.copyWith(passwordHistories: histories);
+          }
+        }
+
+        return updated.copyWith(versions: remote);
+      });
     } finally {
       _isSyncing = false;
     }
+  }
+
+  Set<String> _diffNodes(Versions local, Versions remote) {
+    final nodes = <String>{};
+
+    if (remote.data > local.data) nodes.add(UserConstants.data);
+    if (remote.email > local.email) nodes.add(UserConstants.email);
+    if (remote.metadata > local.metadata) nodes.add(UserConstants.metadata);
+    if (remote.preferredLanguage > local.preferredLanguage) {
+      nodes.add(UserConstants.preferredLanguage);
+    }
+    if (remote.sessions > local.sessions) nodes.add(UserConstants.sessions);
+    if (remote.passwordHistories > local.passwordHistories) {
+      nodes.add(UserConstants.passwordHistories);
+    }
+
+    return nodes;
   }
 }

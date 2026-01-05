@@ -33,9 +33,14 @@ import 'package:flutter/foundation.dart';
 @internal
 class UserTable extends Table {
   TextColumn get userId => text()();
+
   TextColumn get email => text()();
-  IntColumn get version => integer()();
-  TextColumn get data => text()();
+  TextColumn get data => text().nullable()();
+  TextColumn get passwordHistories => text()();
+  TextColumn get metadata => text()();
+  TextColumn get preferredLanguage => text()();
+  TextColumn get sessions => text()();
+  TextColumn get avatar => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {userId};

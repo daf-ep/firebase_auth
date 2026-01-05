@@ -233,7 +233,7 @@ extension on DeviceInfoServiceImpl {
   }
 
   void getIpInfo() {
-    networkSub = _network.isReachableStream.distinct().listen((isReachable) {
+    networkSub = _network.isReachable.stream.distinct().listen((isReachable) {
       if (isReachable) {
         networkSub?.cancel();
         networkSub = null;

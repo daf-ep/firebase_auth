@@ -39,6 +39,7 @@ import 'package:rxdart/subjects.dart';
 import '../../../../helpers/database.dart';
 import '../../../../models/observe.dart';
 import '../../../../models/user/user.dart';
+import '../../../../models/user/version.dart';
 import '../../auth/user_service.dart';
 import '../../device/device_info_service.dart';
 import '../../users/users_service.dart';
@@ -50,29 +51,29 @@ abstract class RemoteCurrentUserHelperService {
 
   Future<User?> get();
 
-  Future<void> update(User? Function(User?) copyWith);
+  Future<void> update(Future<User?> Function(User?) copyWith);
 
   Future<void> delete();
 
   Observe<List<String>?> get connectedDevices;
 
-  Observe<int?> get version;
+  Observe<Versions?> get versions;
 }
 
 @Singleton(as: RemoteCurrentUserHelperService)
 class RemoteCurrentUserHelperServiceImpl implements RemoteCurrentUserHelperService {
   final AuthUserService _authUser;
   final DeviceInfoService _deviceInfo;
-  final UsersService _users;
+  final RemoteUsersService _users;
   final LocalCurrentUserHelperService _local;
 
   RemoteCurrentUserHelperServiceImpl(this._authUser, this._deviceInfo, this._users, this._local);
 
-  final _versionSubject = BehaviorSubject<int?>.seeded(null);
+  final _versionsSubject = BehaviorSubject<Versions?>.seeded(null);
   final _connectedDevicesSubject = BehaviorSubject<List<String>?>.seeded(null);
 
   @override
-  Observe<int?> get version => Observe<int?>(value: _versionSubject.value, stream: _versionSubject.stream);
+  Observe<Versions?> get versions => Observe<Versions?>(value: _versionsSubject.value, stream: _versionsSubject.stream);
 
   @override
   Observe<List<String>?> get connectedDevices =>
@@ -86,32 +87,57 @@ class RemoteCurrentUserHelperServiceImpl implements RemoteCurrentUserHelperServi
     final userId = _authUser.userId.value;
     if (userId == null) return null;
 
-    return _users.getUser(userId);
+    return _users.user(userId);
   }
 
   @override
-  Future<void> update(User? Function(User?) copyWith) async {
+  Future<void> update(Future<User?> Function(User?) copyWith) async {
     final userId = _authUser.userId.value;
     if (userId == null) return;
 
-    final data = _local.data.value;
-    if (data == null) return;
+    final current = _local.data.value;
+    if (current == null) return;
 
-    final updated = copyWith(data);
+    final updated = await copyWith(current);
     if (updated == null) return;
 
-    final patch = JsonPatch.diff(data.toMap(), updated.toMap());
+    final patch = JsonPatch.diff(current.toMap(), updated.toMap());
     if (patch.isEmpty) return;
 
-    final updates = jsonPatchToRtdbUpdate(patch);
-    updates[UserConstants.version] = ServerValue.increment(1);
-
     final basePath = DatabaseNodes.users(userId).path;
-
     final finalUpdates = <String, Object?>{};
-    updates.forEach((key, value) => finalUpdates['$basePath/$key'] = value);
 
-    print("=====> $finalUpdates");
+    final touchedNodes = <String>{};
+
+    for (final op in patch) {
+      final operation = op['op'] as String;
+      final rawPath = (op['path'] as String).replaceFirst('/', '').replaceAll('~1', '/').replaceAll('~0', '~');
+
+      final segments = rawPath.split('/');
+      if (segments.isEmpty) continue;
+
+      final rootKey = segments.first;
+      touchedNodes.add(rootKey);
+
+      final rtdbPath = '$basePath/$rawPath';
+
+      switch (operation) {
+        case 'add':
+        case 'replace':
+          finalUpdates[rtdbPath] = op['value'];
+        case 'remove':
+          finalUpdates[rtdbPath] = null;
+      }
+    }
+
+    for (final key in touchedNodes) {
+      finalUpdates['$basePath/${UserConstants.versions}/$key'] = ServerValue.increment(1);
+    }
+
+    print("====> $finalUpdates");
+
+    // // Écriture atomique
+    // await DatabaseNodes.root().update(finalUpdates);
   }
 
   @override
@@ -131,7 +157,7 @@ class RemoteCurrentUserHelperServiceImpl implements RemoteCurrentUserHelperServi
 
   StreamSubscription<DatabaseEvent>? _connectedSub;
   StreamSubscription<DatabaseEvent>? _presenceIds;
-  StreamSubscription<int?>? _versionSub;
+  StreamSubscription<Versions?>? _versionsSub;
 
   bool _presenceActive = false;
   String? _lastUserId;
@@ -145,27 +171,29 @@ extension on RemoteCurrentUserHelperServiceImpl {
           return false;
         })
         .listen((userId) {
-          _versionSub?.cancel();
-          _versionSub = null;
+          _versionsSub?.cancel();
+          _versionsSub = null;
 
           if (userId == null) {
-            _versionSubject.value = null;
+            _versionsSubject.value = null;
             return;
           }
 
-          final stream = DatabaseNodes.users(userId).child(UserConstants.version).onValue.map((event) {
+          final stream = DatabaseNodes.users(userId).child(UserConstants.versions).onValue.map((event) {
             final raw = event.snapshot.value;
-            if (raw is! int) return null;
+            if (raw is! Map) return null;
 
-            return raw;
+            final map = raw.entries.fold<Map<String, dynamic>>({}, (map, entry) {
+              final key = entry.key.toString();
+              final value = _cast(entry.value);
+              map[key] = value;
+              return map;
+            });
+
+            return Versions.fromMap(map);
           });
 
-          _versionSub = stream
-              .distinct((prev, next) {
-                if (prev == next) return true;
-                return false;
-              })
-              .listen((version) => _versionSubject.value = version);
+          _versionsSub = stream.distinct(_versionsEquals).listen((versions) => _versionsSubject.value = versions);
         });
   }
 
@@ -243,24 +271,25 @@ extension on RemoteCurrentUserHelperServiceImpl {
     }
   }
 
-  Map<String, Object?> jsonPatchToRtdbUpdate(List<dynamic> patch) {
-    final updates = <String, Object?>{};
+  bool _versionsEquals(Versions? a, Versions? b) {
+    final aMap = a?.toMap();
+    final bMap = a?.toMap();
 
-    for (final op in patch) {
-      final operation = op['op'] as String;
-      final path = (op['path'] as String).replaceFirst('/', '').replaceAll('~1', '/').replaceAll('~0', '~');
+    if (mapEquals(aMap, bMap)) return true;
+    if (aMap == null || bMap == null) return false;
 
-      switch (operation) {
-        case 'add':
-        case 'replace':
-          updates[path] = op['value'];
-        case 'remove':
-          updates[path] = null;
-        default:
-          break;
-      }
+    for (final key in aMap.keys) {
+      if (aMap[key] != bMap[key]) return false;
     }
+    return true;
+  }
 
-    return updates;
+  dynamic _cast(dynamic value) {
+    if (value is Map) {
+      return value.map((key, val) => MapEntry(key.toString(), _cast(val)));
+    } else if (value is List) {
+      return value.map(_cast).toList();
+    }
+    return value;
   }
 }

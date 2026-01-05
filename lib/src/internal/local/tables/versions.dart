@@ -1,4 +1,4 @@
-// Copyright (C) 2025 Fiber
+// Copyright (C) 2026 Fiber
 //
 // All rights reserved. This script, including its code and logic, is the
 // exclusive property of Fiber. Redistribution, reproduction,
@@ -27,43 +27,21 @@
 // is a violation of applicable intellectual property laws and will result
 // in legal action.
 
+import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
-import 'package:injectable/injectable.dart';
-import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
-import 'package:rxdart/subjects.dart';
-
-import '../../../models/observe.dart';
 
 @internal
-abstract class NetworkService {
-  Observe<bool> get isReachable;
-}
+class VersionsTable extends Table {
+  TextColumn get userId => text()();
 
-@Singleton(as: NetworkService, order: -1)
-class NetworkServiceImpl implements NetworkService {
-  final _isReachableSubject = BehaviorSubject<bool>.seeded(false);
+  IntColumn get data => integer().withDefault(const Constant(1))();
+  IntColumn get email => integer().withDefault(const Constant(1))();
+  IntColumn get passwordHistories => integer().withDefault(const Constant(1))();
+  IntColumn get metadata => integer().withDefault(const Constant(1))();
+  IntColumn get preferredLanguage => integer().withDefault(const Constant(1))();
+  IntColumn get sessions => integer().withDefault(const Constant(1))();
+  IntColumn get avatar => integer().withDefault(const Constant(1))();
 
   @override
-  Observe<bool> get isReachable => Observe<bool>(value: _isReachableSubject.value, stream: _isReachableSubject.stream);
-
-  @PostConstruct(preResolve: true)
-  Future<void> init() async {
-    await listenToReachable();
-  }
-}
-
-extension on NetworkServiceImpl {
-  Future<void> listenToReachable() async {
-    final internetStatus = await InternetConnection().internetStatus;
-    _isReachableSubject.value = internetStatus == InternetStatus.connected;
-
-    InternetConnection().onStatusChange
-        .distinct((prev, next) {
-          if (prev == next) return true;
-          return false;
-        })
-        .listen((isReachable) {
-          _isReachableSubject.value = isReachable == InternetStatus.connected;
-        });
-  }
+  Set<Column> get primaryKey => {userId};
 }

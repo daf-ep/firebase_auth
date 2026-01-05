@@ -55,7 +55,7 @@ class CurrentUserMetadataServiceImpl implements CurrentUserMetadataService {
 
   @override
   Future<void> update({int? updatedAt, int? lastSignInTime}) => _helper.update(
-    (user) => user?.copyWith(
+    (user) async => user?.copyWith(
       metadata: user.metadata.copyWith(updatedAt: updatedAt, lastSignInTime: lastSignInTime),
     ),
   );

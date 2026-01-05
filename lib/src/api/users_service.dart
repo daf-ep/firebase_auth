@@ -28,16 +28,33 @@
 // in legal action.
 
 import 'package:injectable/injectable.dart';
-import 'package:rxdart/subjects.dart';
 
-abstract class UsersService {}
+import '../../models/resource.dart';
+import '../../models/user/user.dart';
+import '../../models/users/presence.dart';
+import '../internal/users/users_service.dart';
+
+abstract class UsersService {
+  Resource<User?> user(String userId);
+
+  Stream<Presence> presence(String userId);
+
+  Stream<List<Presence>> presences(List<String> userIds);
+}
 
 @Singleton(as: UsersService)
 class UsersServiceImpl implements UsersService {
-  final _subject = BehaviorSubject<bool>.seeded(false);
+  final RemoteUsersService _users;
 
-  @PostConstruct()
-  init() async {}
+  UsersServiceImpl(this._users);
+
+  @override
+  Resource<User?> user(String userId) =>
+      Resource<User?>(get: (id) => _users.user(id), stream: (id) => _users.userStream(id));
+
+  @override
+  Stream<Presence> presence(String userId) => _users.presence(userId);
+
+  @override
+  Stream<List<Presence>> presences(List<String> userIds) => _users.presences(userIds);
 }
-
-extension on UsersServiceImpl {}

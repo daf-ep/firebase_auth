@@ -48,7 +48,7 @@ class ForgotPasswordServiceImpl implements ForgotPasswordService {
   final NetworkService _network;
   final AuthForgotPasswordService _forgotPassword;
   final RateLimiteService _rateLimite;
-  final UsersService _users;
+  final RemoteUsersService _users;
 
   ForgotPasswordServiceImpl(this._deviceInfo, this._network, this._forgotPassword, this._rateLimite, this._users);
 
@@ -58,7 +58,7 @@ class ForgotPasswordServiceImpl implements ForgotPasswordService {
 
     if (email.isEmpty) return ForgotPasswordResult.emptyEmail;
     if (!email.isEmail) return ForgotPasswordResult.invalidEmailFormat;
-    if (!_network.isReachable) return ForgotPasswordResult.noInternet;
+    if (!_network.isReachable.value) return ForgotPasswordResult.noInternet;
 
     final deviceId = _deviceInfo.identifier;
     if (await _rateLimite.isRateLimited(RateLimite.resetPassword, deviceId)) {

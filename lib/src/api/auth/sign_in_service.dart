@@ -66,7 +66,7 @@ class SignInServiceImpl implements SignInService {
   final AuthSignInService _authSignIn;
   final CurrentUserMetadataService _userMetadata;
   final UsersSessionsService _usersSessions;
-  final UsersService _users;
+  final RemoteUsersService _users;
 
   SignInServiceImpl(
     this._deviceInfo,
@@ -96,7 +96,7 @@ class SignInServiceImpl implements SignInService {
     if (email.isEmpty) return SignInResult.emptyEmail;
     if (password.isEmpty) return SignInResult.emptyPassword;
     if (!email.isEmail) return SignInResult.invalidEmailFormat;
-    if (!_network.isReachable) return SignInResult.noInternet;
+    if (!_network.isReachable.value) return SignInResult.noInternet;
 
     final deviceId = _deviceInfo.identifier;
     final userId = await _users.getUserId(email);
@@ -141,7 +141,7 @@ class SignInServiceImpl implements SignInService {
     otp = otp.trim();
 
     if (otp.isEmpty) return SignInOtpResult.emptyOtp;
-    if (!_network.isReachable) return SignInOtpResult.noInternet;
+    if (!_network.isReachable.value) return SignInOtpResult.noInternet;
 
     final deviceId = _deviceInfo.identifier;
 
@@ -178,6 +178,7 @@ class SignInServiceImpl implements SignInService {
         updatedAt: DateTime.now().millisecondsSinceEpoch,
         isSignedIn: true,
         lastSignInTime: DateTime.now().millisecondsSinceEpoch,
+        lastSeenAt: DateTime.now().millisecondsSinceEpoch,
       ),
       networkLocation: NetworkLocation(
         city: _deviceInfo.ipInfo?.city,
@@ -204,7 +205,7 @@ class SignInServiceImpl implements SignInService {
     final password = _newDeviceDetectedPassword;
     if (email == null || password == null) return SignInNewOtpResult.unknown;
 
-    if (!_network.isReachable) return SignInNewOtpResult.noInternet;
+    if (!_network.isReachable.value) return SignInNewOtpResult.noInternet;
 
     final deviceId = _deviceInfo.identifier;
 

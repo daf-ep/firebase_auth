@@ -28,50 +28,60 @@
 // in legal action.
 
 import 'package:equatable/equatable.dart';
+import 'package:flutter/foundation.dart';
 
+import 'avatar.dart';
 import 'email.dart';
 import 'metadata.dart';
 import 'password.dart';
 import 'preferred_language.dart';
 import 'session.dart';
+import 'version.dart';
 
 class UserConstants {
-  static const String version = "version";
   static const String email = "email";
   static const String sessions = "sessions";
   static const String metadata = "metadata";
+  static const String avatar = "avatar";
   static const String preferredLanguage = "preferred_language";
   static const String passwordHistories = "password_histories";
   static const String data = "data";
+  static const String versions = "_versions";
 }
 
 class User extends Equatable {
   final String userId;
-  final int version;
   final Email email;
+  final Avatar? avatar;
   final List<Session> sessions;
   final UserMetadata metadata;
   final PreferredLanguage preferredLanguage;
   final List<PasswordHistories> passwordHistories;
-  final Map<String, dynamic> data;
+  final Map<String, dynamic>? data;
+  final Versions versions;
 
   const User({
     required this.userId,
-    required this.version,
     required this.email,
     required this.sessions,
     required this.metadata,
+    required this.avatar,
     required this.preferredLanguage,
     required this.passwordHistories,
     required this.data,
+    required this.versions,
   });
 
   factory User.fromMap(String userId, Map<String, dynamic> map) {
     return User(
       userId: userId,
-      version: map[UserConstants.version],
       email: Email.fromMap(map[UserConstants.email]),
       metadata: UserMetadata.fromMap(map[UserConstants.metadata]),
+      avatar: switch (AvatarType.values.byName(map[AvatarFields.objectType])) {
+        AvatarType.photoAvatar => PhotoAvatar.fromMap(map),
+        AvatarType.textAvatar => TextAvatar.fromMap(map),
+        AvatarType.placeholderAvatar => PlaceholderAvatar.fromMap(map),
+      },
       sessions: ((map[UserConstants.sessions] ?? {}) as Map<dynamic, dynamic>).entries
           .map((e) => Session.fromMap(e.key, e.value))
           .toList(),
@@ -80,43 +90,47 @@ class User extends Equatable {
           .map((e) => PasswordHistories.fromMap(e as Map<String, dynamic>))
           .toList(),
       data: map[UserConstants.data],
+      versions: Versions.fromMap(map[UserConstants.versions]),
     );
   }
 
   User copyWith({
     String? userId,
-    int? version,
     Email? email,
     List<Session>? sessions,
     UserMetadata? metadata,
+    ValueGetter<Avatar?>? avatar,
     PreferredLanguage? preferredLanguage,
     List<PasswordHistories>? passwordHistories,
     Map<String, dynamic>? data,
+    Versions? versions,
   }) {
     return User(
       userId: userId ?? this.userId,
-      version: version ?? this.version,
       email: email ?? this.email,
       sessions: sessions ?? this.sessions,
       metadata: metadata ?? this.metadata,
+      avatar: avatar != null ? avatar() : this.avatar,
       preferredLanguage: preferredLanguage ?? this.preferredLanguage,
       passwordHistories: passwordHistories ?? this.passwordHistories,
       data: data ?? this.data,
+      versions: versions ?? this.versions,
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
-      UserConstants.version: version,
       UserConstants.email: email.toMap(),
       UserConstants.sessions: Map.fromEntries(sessions.map((device) => MapEntry(device.deviceId, device.toMap()))),
       UserConstants.metadata: metadata.toMap(),
+      UserConstants.avatar: avatar,
       UserConstants.preferredLanguage: preferredLanguage.toMap(),
       UserConstants.passwordHistories: passwordHistories.map((history) => history.toMap()).toList(),
       UserConstants.data: data,
+      UserConstants.versions: versions,
     };
   }
 
   @override
-  List<Object?> get props => [userId, version, sessions, metadata, preferredLanguage, passwordHistories, data];
+  List<Object?> get props => [userId, versions, sessions, metadata, avatar, preferredLanguage, passwordHistories, data];
 }

@@ -27,32 +27,43 @@
 // is a violation of applicable intellectual property laws and will result
 // in legal action.
 
+import 'package:equatable/equatable.dart';
+
 class UserMetadataConstants {
   static const String createdAt = "created_at";
   static const String updatedAt = "updated_at";
   static const String lastSignInTime = "last_sign_in_time";
+  static const String lastSeenAt = "last_seen_at";
 }
 
-class UserMetadata {
+class UserMetadata extends Equatable {
   final int createdAt;
   final int updatedAt;
   final int lastSignInTime;
+  final int lastSeenAt;
 
-  UserMetadata({required this.createdAt, required this.updatedAt, required this.lastSignInTime});
+  const UserMetadata({
+    required this.createdAt,
+    required this.updatedAt,
+    required this.lastSignInTime,
+    required this.lastSeenAt,
+  });
 
   factory UserMetadata.fromMap(Map<String, dynamic> map) {
     return UserMetadata(
       createdAt: map[UserMetadataConstants.createdAt],
       updatedAt: map[UserMetadataConstants.updatedAt],
       lastSignInTime: map[UserMetadataConstants.lastSignInTime],
+      lastSeenAt: map[UserMetadataConstants.lastSeenAt],
     );
   }
 
-  UserMetadata copyWith({int? createdAt, int? updatedAt, int? lastSignInTime}) {
+  UserMetadata copyWith({int? createdAt, int? updatedAt, int? lastSignInTime, int? lastSeenAt}) {
     return UserMetadata(
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       lastSignInTime: lastSignInTime ?? this.lastSignInTime,
+      lastSeenAt: lastSeenAt ?? this.lastSeenAt,
     );
   }
 
@@ -61,6 +72,10 @@ class UserMetadata {
       UserMetadataConstants.createdAt: createdAt,
       UserMetadataConstants.updatedAt: updatedAt,
       UserMetadataConstants.lastSignInTime: lastSignInTime,
+      UserMetadataConstants.lastSeenAt: lastSeenAt,
     };
   }
+
+  @override
+  List<Object?> get props => [createdAt, updatedAt, lastSignInTime, lastSeenAt];
 }

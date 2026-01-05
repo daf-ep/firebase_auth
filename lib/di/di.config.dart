@@ -100,7 +100,6 @@ extension GetItInjectableX on _i174.GetIt {
       final i = _i348.DeviceInfoServiceImpl(gh<_i484.NetworkService>());
       return i.init().then((_) => i);
     }, preResolve: true);
-    gh.singleton<_i838.UsersService>(() => _i838.UsersServiceImpl());
     gh.singleton<_i1052.UsersSessionsService>(
       () => _i1052.UsersSessionsServiceImpl(),
     );
@@ -117,12 +116,14 @@ extension GetItInjectableX on _i174.GetIt {
     gh.singleton<_i134.LocalRateLimiteService>(
       () => _i134.LocalRateLimiteServiceImpl(),
     );
-    gh.singleton<_i1003.UsersService>(() => _i1003.UsersServiceImpl()..init());
-    gh.singleton<_i1044.LocalCurrentUserHelperService>(
-      () => _i1044.LocalCurrentUserHelperServiceImpl(
+    gh.singleton<_i838.RemoteUsersService>(
+      () => _i838.RemoteUsersServiceImpl(
+        gh<_i484.NetworkService>(),
         gh<_i114.AuthUserService>(),
-        gh<_i838.UsersService>(),
-      )..init(),
+      ),
+    );
+    gh.singleton<_i1003.UsersService>(
+      () => _i1003.UsersServiceImpl(gh<_i838.RemoteUsersService>()),
     );
     gh.singleton<_i596.RateLimiteService>(
       () => _i596.RateLimiteServiceImpl(
@@ -130,11 +131,26 @@ extension GetItInjectableX on _i174.GetIt {
         gh<_i396.RemoteRateLimiteService>(),
       ),
     );
+    gh.singleton<_i1044.LocalCurrentUserHelperService>(
+      () => _i1044.LocalCurrentUserHelperServiceImpl(
+        gh<_i114.AuthUserService>(),
+        gh<_i838.RemoteUsersService>(),
+      )..init(),
+    );
+    gh.singleton<_i1004.ForgotPasswordService>(
+      () => _i1004.ForgotPasswordServiceImpl(
+        gh<_i348.DeviceInfoService>(),
+        gh<_i484.NetworkService>(),
+        gh<_i953.AuthForgotPasswordService>(),
+        gh<_i596.RateLimiteService>(),
+        gh<_i838.RemoteUsersService>(),
+      ),
+    );
     gh.singleton<_i42.RemoteCurrentUserHelperService>(
       () => _i42.RemoteCurrentUserHelperServiceImpl(
         gh<_i114.AuthUserService>(),
         gh<_i348.DeviceInfoService>(),
-        gh<_i838.UsersService>(),
+        gh<_i838.RemoteUsersService>(),
         gh<_i1044.LocalCurrentUserHelperService>(),
       )..init(),
     );
@@ -144,18 +160,22 @@ extension GetItInjectableX on _i174.GetIt {
         gh<_i42.RemoteCurrentUserHelperService>(),
         gh<_i348.DeviceInfoService>(),
         gh<_i114.AuthUserService>(),
+        gh<_i838.RemoteUsersService>(),
       )..init(),
+    );
+    gh.singleton<_i359.CurrentUserService>(
+      () => _i359.CurrentUserServiceImpl(
+        gh<_i201.CurrentUserHelperService>(),
+        gh<_i114.AuthUserService>(),
+      ),
     );
     gh.singleton<_i521.AuthSignInService>(
       () => _i521.AuthSignInServiceImpl(gh<_i348.DeviceInfoService>()),
     );
-    gh.singleton<_i1004.ForgotPasswordService>(
-      () => _i1004.ForgotPasswordServiceImpl(
-        gh<_i348.DeviceInfoService>(),
-        gh<_i484.NetworkService>(),
-        gh<_i953.AuthForgotPasswordService>(),
-        gh<_i596.RateLimiteService>(),
-        gh<_i838.UsersService>(),
+    gh.singleton<_i1062.UserService>(
+      () => _i1062.UserServiceImpl(
+        gh<_i114.AuthUserService>(),
+        gh<_i359.CurrentUserService>(),
       ),
     );
     gh.singleton<_i343.CurrentUserMetadataService>(
@@ -194,15 +214,18 @@ extension GetItInjectableX on _i174.GetIt {
         gh<_i201.CurrentUserHelperService>(),
       ),
     );
+    gh.singleton<_i899.SignUpService>(
+      () => _i899.SignUpServiceImpl(
+        gh<_i348.DeviceInfoService>(),
+        gh<_i484.NetworkService>(),
+        gh<_i596.RateLimiteService>(),
+        gh<_i566.AuthSignUpService>(),
+        gh<_i359.CurrentUserService>(),
+      ),
+    );
     gh.singleton<_i13.UserPreferredLanguageService>(
       () => _i13.UserPreferredLanguageServiceImpl(
         gh<_i276.CurrentUserPreferredLanguageService>(),
-      ),
-    );
-    gh.singleton<_i359.CurrentUserService>(
-      () => _i359.CurrentUserServiceImpl(
-        gh<_i201.CurrentUserHelperService>(),
-        gh<_i114.AuthUserService>(),
       ),
     );
     gh.singleton<_i0.UserMetadataService>(
@@ -211,22 +234,6 @@ extension GetItInjectableX on _i174.GetIt {
     gh.singleton<_i825.UserAllSessionsService>(
       () =>
           _i825.UserAllSessionsServiceImpl(gh<_i1025.CurrentSessionsService>()),
-    );
-    gh.singleton<_i569.UserEmailService>(
-      () => _i569.UserEmailServiceImpl(gh<_i948.CurrentUserEmailService>()),
-    );
-    gh.singleton<_i1062.UserService>(
-      () => _i1062.UserServiceImpl(
-        gh<_i114.AuthUserService>(),
-        gh<_i359.CurrentUserService>(),
-      ),
-    );
-    gh.singleton<_i607.UserSessionService>(
-      () => _i607.UserSessionServiceImpl(
-        gh<_i825.UserAllSessionsService>(),
-        gh<_i348.DeviceInfoService>(),
-        gh<_i1025.CurrentSessionsService>(),
-      ),
     );
     gh.singleton<_i573.SignInService>(
       () => _i573.SignInServiceImpl(
@@ -237,21 +244,22 @@ extension GetItInjectableX on _i174.GetIt {
         gh<_i521.AuthSignInService>(),
         gh<_i343.CurrentUserMetadataService>(),
         gh<_i1052.UsersSessionsService>(),
-        gh<_i838.UsersService>(),
+        gh<_i838.RemoteUsersService>(),
+      ),
+    );
+    gh.singleton<_i569.UserEmailService>(
+      () => _i569.UserEmailServiceImpl(gh<_i948.CurrentUserEmailService>()),
+    );
+    gh.singleton<_i607.UserSessionService>(
+      () => _i607.UserSessionServiceImpl(
+        gh<_i825.UserAllSessionsService>(),
+        gh<_i348.DeviceInfoService>(),
+        gh<_i1025.CurrentSessionsService>(),
       ),
     );
     gh.singleton<_i928.UserPasswordHistoriesService>(
       () => _i928.UserPasswordHistoriesServiceImpl(
         gh<_i53.CurrentUserPasswordHistoriesService>(),
-      ),
-    );
-    gh.singleton<_i899.SignUpService>(
-      () => _i899.SignUpServiceImpl(
-        gh<_i348.DeviceInfoService>(),
-        gh<_i484.NetworkService>(),
-        gh<_i596.RateLimiteService>(),
-        gh<_i566.AuthSignUpService>(),
-        gh<_i359.CurrentUserService>(),
       ),
     );
     return this;

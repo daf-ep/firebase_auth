@@ -44,11 +44,12 @@ import 'package:sqlite3/sqlite3.dart';
 import '../app/app.dart';
 import 'tables/rate_limite.dart';
 import 'tables/user.dart';
+import 'tables/versions.dart';
 
 part 'local_storage.g.dart';
 
 @internal
-@DriftDatabase(tables: [UserTable, RateLimiteTable])
+@DriftDatabase(tables: [UserTable, RateLimiteTable, VersionsTable])
 class LocalStorage extends _$LocalStorage {
   static LocalStorage? _instance;
 
@@ -95,6 +96,7 @@ class LocalStorage extends _$LocalStorage {
     onUpgrade: (m, from, to) async {
       if (from == 1) {
         await m.createTable(userTable);
+        await m.createTable(versionsTable);
         await m.createTable(rateLimiteTable);
       }
     },
@@ -102,6 +104,7 @@ class LocalStorage extends _$LocalStorage {
       final migrator = Migrator(this);
 
       await _ensureTableExists(userTable.actualTableName, () => migrator.createTable(userTable));
+      await _ensureTableExists(versionsTable.actualTableName, () => migrator.createTable(versionsTable));
       await _ensureTableExists(rateLimiteTable.actualTableName, () => migrator.createTable(rateLimiteTable));
     },
   );

@@ -83,7 +83,7 @@ class CurrentSessionsServiceImpl implements CurrentSessionsService {
 
     sessions.add(session);
 
-    return _helper.update((user) => user?.copyWith(sessions: sessions));
+    return _helper.update((user) async => user?.copyWith(sessions: sessions));
   }
 
   @override
@@ -93,7 +93,7 @@ class CurrentSessionsServiceImpl implements CurrentSessionsService {
 
     sessions.removeWhere((session) => session.deviceId == deviceId);
 
-    return _helper.update((user) => user?.copyWith(sessions: sessions));
+    return _helper.update((user) async => user?.copyWith(sessions: sessions));
   }
 
   @override
@@ -144,7 +144,7 @@ class CurrentSessionsServiceImpl implements CurrentSessionsService {
     }
 
     return _helper.update(
-      (user) => user?.copyWith(
+      (user) async => user?.copyWith(
         metadata: user.metadata.copyWith(updatedAt: DateTime.now().millisecondsSinceEpoch),
         preferredLanguage: preferredLanguage,
         sessions: sessions,

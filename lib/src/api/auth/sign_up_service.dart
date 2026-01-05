@@ -36,11 +36,13 @@ import '../../../extensions/local.dart';
 import '../../../models/auth/credentials.dart';
 import '../../../models/auth/password_policy.dart';
 import '../../../models/auth/rate_limite.dart';
+import '../../../models/user/avatar.dart';
 import '../../../models/user/email.dart';
 import '../../../models/user/metadata.dart';
 import '../../../models/user/preferred_language.dart';
 import '../../../models/user/session.dart';
 import '../../../models/user/user.dart';
+import '../../../models/user/version.dart';
 import '../../../results/auth.dart';
 import '../../../results/password_validator.dart';
 import '../../../results/sign_up.dart';
@@ -53,7 +55,8 @@ import '../../internal/device/network_service.dart';
 abstract class SignUpService {
   Future<SignUpResult> signUpWithEmailAndPassword({
     required Credentials credentials,
-    required Map<String, dynamic> data,
+    Avatar? avatar,
+    Map<String, dynamic>? data,
   });
 
   PasswordValidatorResult isPasswordValid({required PasswordPolicy passwordPolicy, required String password});
@@ -72,7 +75,8 @@ class SignUpServiceImpl implements SignUpService {
   @override
   Future<SignUpResult> signUpWithEmailAndPassword({
     required Credentials credentials,
-    required Map<String, dynamic> data,
+    Avatar? avatar,
+    Map<String, dynamic>? data,
   }) async {
     final policy = credentials.passwordPolicy ?? PasswordPolicy(min: 6);
 
@@ -85,7 +89,7 @@ class SignUpServiceImpl implements SignUpService {
         isPasswordValid(passwordPolicy: policy, password: password) != PasswordValidatorResult.valid) {
       return SignUpResult.weakPassword;
     }
-    if (!_network.isReachable) return SignUpResult.noInternet;
+    if (!_network.isReachable.value) return SignUpResult.noInternet;
 
     final deviceId = _deviceInfo.identifier;
     if (await _rateLimite.isRateLimited(RateLimite.signUp, deviceId)) return SignUpResult.tooManyRequests;
@@ -117,8 +121,8 @@ class SignUpServiceImpl implements SignUpService {
       metadata: SessionMetadata(
         createdAt: DateTime.now().millisecondsSinceEpoch,
         updatedAt: DateTime.now().millisecondsSinceEpoch,
-        isSignedIn: true,
         lastSignInTime: DateTime.now().millisecondsSinceEpoch,
+        lastSeenAt: DateTime.now().millisecondsSinceEpoch,
       ),
       networkLocation: NetworkLocation(
         city: _deviceInfo.ipInfo?.city,
@@ -135,17 +139,27 @@ class SignUpServiceImpl implements SignUpService {
 
     final user = User(
       userId: userId,
-      version: 1,
       email: Email(value: email, histories: []),
       sessions: [device],
       metadata: UserMetadata(
         createdAt: DateTime.now().millisecondsSinceEpoch,
         updatedAt: DateTime.now().millisecondsSinceEpoch,
         lastSignInTime: DateTime.now().millisecondsSinceEpoch,
+        lastSeenAt: DateTime.now().millisecondsSinceEpoch,
       ),
+      avatar: avatar,
       preferredLanguage: PreferredLanguage(current: PlatformDispatcher.instance.locale.convert(), histories: []),
       passwordHistories: [],
       data: data,
+      versions: Versions(
+        data: 1,
+        email: 1,
+        metadata: 1,
+        preferredLanguage: 1,
+        sessions: 1,
+        passwordHistories: 1,
+        avatar: 1,
+      ),
     );
 
     await _currentUser.add(user);

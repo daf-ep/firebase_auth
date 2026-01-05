@@ -43,6 +43,7 @@ class SessionMetadataConstants {
   static const String createdAt = "created_at";
   static const String updatedAt = "updated_at";
   static const String lastSignInTime = "last_sign_in_time";
+  static const String lastSeenAt = "last_seen_at";
 }
 
 class SessionPreferencesConstants {
@@ -122,30 +123,34 @@ class SessionMetadata extends Equatable {
   final int createdAt;
   final int updatedAt;
   final int lastSignInTime;
+  final int lastSeenAt;
   final bool isSignedIn;
 
   const SessionMetadata({
     required this.createdAt,
     required this.updatedAt,
     required this.lastSignInTime,
-    required this.isSignedIn,
+    required this.lastSeenAt,
+    this.isSignedIn = false,
   });
 
   factory SessionMetadata.fromMap(Map<String, dynamic> map) {
     return SessionMetadata(
       createdAt: map[SessionMetadataConstants.createdAt],
       updatedAt: map[SessionMetadataConstants.updatedAt],
-      isSignedIn: false,
       lastSignInTime: map[SessionMetadataConstants.lastSignInTime],
+      lastSeenAt: map[SessionMetadataConstants.lastSeenAt],
+      isSignedIn: false,
     );
   }
 
-  SessionMetadata copyWith({int? createdAt, int? updatedAt, bool? isSignedIn, int? lastSignInTime}) {
+  SessionMetadata copyWith({int? createdAt, int? updatedAt, int? lastSignInTime, int? lastSeenAt, bool? isSignedIn}) {
     return SessionMetadata(
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
-      isSignedIn: isSignedIn ?? this.isSignedIn,
       lastSignInTime: lastSignInTime ?? this.lastSignInTime,
+      lastSeenAt: lastSeenAt ?? this.lastSeenAt,
+      isSignedIn: isSignedIn ?? this.isSignedIn,
     );
   }
 
@@ -154,11 +159,12 @@ class SessionMetadata extends Equatable {
       SessionMetadataConstants.createdAt: createdAt,
       SessionMetadataConstants.updatedAt: updatedAt,
       SessionMetadataConstants.lastSignInTime: lastSignInTime,
+      SessionMetadataConstants.lastSeenAt: lastSeenAt,
     };
   }
 
   @override
-  List<Object?> get props => [createdAt, updatedAt, lastSignInTime, isSignedIn];
+  List<Object?> get props => [createdAt, updatedAt, lastSignInTime, lastSeenAt, isSignedIn];
 }
 
 class SessionPreferences extends Equatable {
